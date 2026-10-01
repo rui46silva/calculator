@@ -18,7 +18,6 @@ const AUTH_ERRORS: Record<string, string> = {
   email_address_invalid: 'O email não é válido.',
   email_not_confirmed: 'Confirma o teu email antes de entrar.',
   over_request_rate_limit: 'Demasiadas tentativas. Espera um pouco e tenta de novo.',
-  AUTH_NOT_CONFIGURED: 'O login ainda não está configurado neste servidor.',
 };
 
 function authErrorMessage(err: unknown): string {

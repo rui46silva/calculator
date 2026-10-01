@@ -30,8 +30,9 @@ npm test                     # testes das fórmulas financeiras
 4. Gera um segredo com pelo menos 32 caracteres para `NEON_AUTH_COOKIE_SECRET` (ex.: `openssl rand -base64 32`).
 5. Corre `npm run db:migrate`.
 
-Sem `NEON_AUTH_BASE_URL`/`NEON_AUTH_COOKIE_SECRET` não é possível entrar: a página de login mostra
-"O login ainda não está configurado neste servidor".
+Sem `NEON_AUTH_BASE_URL`/`NEON_AUTH_COOKIE_SECRET` não é possível entrar: a página de login diz exatamente
+qual variável falta (ou se o segredo tem menos de 32 caracteres). O URL também é aceite como `NEON_AUTH_URL`.
+O `NEON_AUTH_COOKIE_SECRET` nunca é criado pela integração: tens de o gerar e adicionar tu.
 
 ## Deploy no Vercel
 

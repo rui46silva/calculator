@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from '@/lib/server/auth';
+import { authConfigProblems, getAuth } from '@/lib/server/auth';
 
 type Context = { params: Promise<{ path: string[] }> };
 
 const notConfigured = () =>
   NextResponse.json(
-    { code: 'AUTH_NOT_CONFIGURED', message: 'A autenticação não está configurada (NEON_AUTH_BASE_URL / NEON_AUTH_COOKIE_SECRET).' },
+    {
+      code: 'AUTH_NOT_CONFIGURED',
+      message: `A autenticação não está configurada: ${authConfigProblems().join('; ')}. Define as variáveis no Vercel e faz Redeploy.`,
+    },
     { status: 503 },
   );
 
