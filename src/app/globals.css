@@ -113,7 +113,8 @@ button {
 button.ghost { background: transparent; color: var(--accent); }
 button.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
 button.primary { background: var(--accent); color: #fff; }
-@media (prefers-color-scheme: dark) { button:not(.ghost):not(.danger) { color: #04201d; } }
+/* Dark text only on filled buttons; ghost, link and segmented buttons keep their own colours. */
+@media (prefers-color-scheme: dark) { button:not([class]), button.primary { color: #04201d; } }
 
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; margin-bottom: 12px; }
 .form-grid .full { grid-column: 1 / -1; margin: 0; }
@@ -261,3 +262,4 @@ button:disabled { opacity: 0.5; cursor: default; }
   .etf-picker { grid-template-columns: 1fr; }
   .etf-head { flex-direction: column; align-items: flex-start; }
 }
+.form-msg { margin: 0; padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; border: 1px solid currentColor; }

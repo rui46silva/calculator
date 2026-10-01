@@ -7,7 +7,7 @@ const MIN_SECRET_LENGTH = 32;
 
 let instance: NeonAuth | undefined;
 
-function baseUrl(): string | undefined {
+export function authBaseUrl(): string | undefined {
   for (const name of BASE_URL_VARS) {
     const value = process.env[name]?.trim();
     if (value) return value.replace(/\/+$/, '');
@@ -17,7 +17,7 @@ function baseUrl(): string | undefined {
 /** Human-readable list of what's missing from the auth configuration (variable names only, never values). */
 export function authConfigProblems(): string[] {
   const problems: string[] = [];
-  if (!baseUrl()) problems.push(`${BASE_URL_VARS[0]} não está definida`);
+  if (!authBaseUrl()) problems.push(`${BASE_URL_VARS[0]} não está definida`);
   const secret = process.env[SECRET_VAR]?.trim();
   if (!secret) problems.push(`${SECRET_VAR} não está definida`);
   else if (secret.length < MIN_SECRET_LENGTH) problems.push(`${SECRET_VAR} tem menos de ${MIN_SECRET_LENGTH} caracteres`);
@@ -30,6 +30,6 @@ export function authConfigProblems(): string[] {
  */
 export function getAuth(): NeonAuth | null {
   if (authConfigProblems().length) return null;
-  instance ??= createNeonAuth({ baseUrl: baseUrl()!, cookies: { secret: process.env[SECRET_VAR]!.trim() } });
+  instance ??= createNeonAuth({ baseUrl: authBaseUrl()!, cookies: { secret: process.env[SECRET_VAR]!.trim() } });
   return instance;
 }

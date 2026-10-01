@@ -34,6 +34,11 @@ Sem `NEON_AUTH_BASE_URL`/`NEON_AUTH_COOKIE_SECRET` não é possível entrar: a p
 qual variável falta (ou se o segredo tem menos de 32 caracteres). O URL também é aceite como `NEON_AUTH_URL`.
 O `NEON_AUTH_COOKIE_SECRET` nunca é criado pela integração: tens de o gerar e adicionar tu.
 
+**Diagnóstico:** abre `/api/health` na app publicada. Mostra se a autenticação está configurada, se o servidor
+do Neon Auth responde, se a base de dados está acessível e qual a origem da app (sem revelar segredos).
+Se o login disser que o endereço não está autorizado, adiciona essa origem aos domínios permitidos em Neon → Auth.
+Se o Neon Auth exigir confirmação de email, a conta é criada e a app pede para abrir o link do email antes de entrar.
+
 ## Deploy no Vercel
 
 1. Importa o repositório em [vercel.com/new](https://vercel.com/new) e escolhe esta branch. O Next.js é detetado automaticamente.

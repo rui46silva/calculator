@@ -21,8 +21,26 @@ const AUTH_ERRORS: Record<string, string> = {
 };
 
 function authErrorMessage(err: unknown): string {
-  const e = err as { code?: string; message?: string } | null;
-  return (e?.code && AUTH_ERRORS[e.code]) || e?.message || 'Não foi possível entrar. Tenta novamente.';
+  const e = err as { code?: string; message?: string; status?: number } | null;
+  const message = e?.message ?? '';
+  if (/origin/i.test(message) || e?.code === 'INVALID_ORIGIN') {
+    return `Este endereço (${window.location.origin}) não está autorizado no Neon Auth. Na consola do Neon → Auth, adiciona-o aos domínios permitidos.`;
+  }
+  if (/verif|not confirmed/i.test(message)) return AUTH_ERRORS.email_not_confirmed;
+  const known = e?.code && AUTH_ERRORS[e.code];
+  if (known) return known;
+  return message ? `${message}${e?.status ? ` (erro ${e.status})` : ''}` : 'Não foi possível entrar. Tenta novamente.';
+}
+
+const TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('O servidor de autenticação não respondeu. Tenta novamente daqui a pouco.')), TIMEOUT_MS),
+    ),
+  ]);
 }
 
 const FEATURES = [
@@ -40,6 +58,7 @@ export function LoginView() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -50,14 +69,36 @@ export function LoginView() {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setInfo(null);
     try {
       // The Neon Auth client throws on API errors; Better Auth clients return { error } instead.
-      const { error } =
+      const result = await withTimeout(
         mode === 'signin'
-          ? await authClient.signIn.email({ email, password })
-          : await authClient.signUp.email({ email, password, name: name.trim() || email.split('@')[0] });
-      if (error) setError(authErrorMessage(error));
+          ? authClient.signIn.email({ email, password })
+          : authClient.signUp.email({ email, password, name: name.trim() || email.split('@')[0] }),
+      );
+      if (result?.error) {
+        setError(authErrorMessage(result.error));
+        return;
+      }
+
+      // Only enter the app once the server confirms there is a session.
+      const session = await withTimeout(authClient.getSession());
+      if (session?.data?.user) {
+        window.location.assign('/');
+        return;
+      }
+
+      const created = result?.data as { user?: unknown; token?: string | null } | undefined;
+      if (mode === 'signup' && created?.user) {
+        // Neon Auth requires email verification: the account exists but has no session yet.
+        setInfo(`Conta criada. Enviámos um email de confirmação para ${email}. Abre o link do email e depois entra aqui.`);
+        setMode('signin');
+        return;
+      }
+      setError('Não foi possível iniciar sessão: o servidor não devolveu uma sessão. Abre /api/health para ver o diagnóstico.');
     } catch (err) {
+      console.error('Auth error', err);
       setError(authErrorMessage(err));
     } finally {
       setBusy(false);
@@ -107,8 +148,13 @@ export function LoginView() {
             />
           </Field>
           {error && (
-            <p className="bad" role="alert">
+            <p className="form-msg bad" role="alert">
               {error}
+            </p>
+          )}
+          {info && (
+            <p className="form-msg good" role="status">
+              {info}
             </p>
           )}
           <button type="submit" className="primary" disabled={busy}>
@@ -123,6 +169,7 @@ export function LoginView() {
             onClick={() => {
               setMode(mode === 'signin' ? 'signup' : 'signin');
               setError(null);
+              setInfo(null);
             }}
           >
             {mode === 'signin' ? 'Criar conta nova' : 'Entrar'}
