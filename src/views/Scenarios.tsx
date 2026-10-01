@@ -4,7 +4,8 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../data/store';
 import { Card, Field, NumberInput, PercentInput, Stat } from '../components/ui';
 import { projectScenario, type ScenarioInput } from '../lib/summary';
-import { money } from '../lib/format';
+import Link from 'next/link';
+import { money, percent } from '../lib/format';
 
 const PRESETS: Record<string, Omit<ScenarioInput, 'years' | 'investShare'>> = {
   Pessimista: { inflation: 0.035, incomeGrowth: 0.01, investmentReturn: 0.02 },
@@ -12,9 +13,19 @@ const PRESETS: Record<string, Omit<ScenarioInput, 'years' | 'investShare'>> = {
   Otimista: { inflation: 0.015, incomeGrowth: 0.04, investmentReturn: 0.08 },
 };
 
+type PresetName = keyof typeof PRESETS;
+
 export function Scenarios() {
   const { data } = useStore();
-  const [input, setInput] = useState<ScenarioInput>({ years: 15, investShare: 0.5, ...PRESETS.Base });
+  const market = data.marketAssumptions;
+  /** Presets keep their inflation/salary assumptions but take investment returns from the applied ETF analysis. */
+  const preset = (name: PresetName) => {
+    const p = PRESETS[name];
+    if (!market) return p;
+    const rates: Record<PresetName, number> = { Pessimista: market.pessimistic, Base: market.base, Otimista: market.optimistic };
+    return { ...p, investmentReturn: rates[name] };
+  };
+  const [input, setInput] = useState<ScenarioInput>(() => ({ years: 15, investShare: 0.5, ...preset('Base') }));
   const set = <K extends keyof ScenarioInput>(k: K, v: ScenarioInput[K]) => setInput((i) => ({ ...i, [k]: v }));
 
   const years = useMemo(() => projectScenario(data, input), [data, input]);
@@ -26,9 +37,16 @@ export function Scenarios() {
     <>
       <h1>Cenários</h1>
       <Card title="Pressupostos">
+        {market && (
+          <p className="note">
+            Rentabilidades dos presets baseadas no histórico de <strong>{market.name}</strong> ({market.symbol}): pessimista{' '}
+            {percent(market.pessimistic)}, base {percent(market.base)}, otimista {percent(market.optimistic)} por ano. Podes mudar o
+            ETF em <Link href="/investimentos">Investimentos</Link>.
+          </p>
+        )}
         <div className="preset-row">
-          {Object.entries(PRESETS).map(([name, p]) => (
-            <button key={name} className="ghost" onClick={() => setInput((i) => ({ ...i, ...p }))}>
+          {(Object.keys(PRESETS) as PresetName[]).map((name) => (
+            <button key={name} className="ghost" onClick={() => setInput((i) => ({ ...i, ...preset(name) }))}>
               {name}
             </button>
           ))}

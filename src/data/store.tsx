@@ -1,90 +1,110 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { authClient } from '@/lib/auth-client';
 import { ConflictError, fetchRemote, pushRemote } from './sync';
 import { emptyData, type AppData, type Collection } from './types';
 
-const STORAGE_KEY = 'financas:data';
+/** Data saved before accounts existed; handed over once to the first user who signs in on this device. */
+const LEGACY_KEY = 'financas:data';
+const storageKey = (userId: string) => `financas:data:${userId}`;
 const PUSH_DELAY_MS = 800;
 const POLL_INTERVAL_MS = 30_000;
 
-export type SyncStatus = 'local' | 'syncing' | 'synced' | 'error';
+export type SyncStatus = 'syncing' | 'synced' | 'error';
 
 export interface SessionUser {
   id: string;
   email: string;
   name: string;
+  createdAt: string;
 }
 
 interface StoreValue {
   data: AppData;
-  user: SessionUser | null;
+  user: SessionUser;
   syncStatus: SyncStatus;
   upsert<C extends Collection>(collection: C, item: AppData[C][number]): void;
   remove(collection: Collection, id: string): void;
+  update(patch: Partial<Omit<AppData, 'version' | 'updatedAt' | Collection>>): void;
   replaceAll(data: AppData): void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-function loadLocal(): AppData {
+function readKey(key: string): AppData | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...emptyData(), ...(JSON.parse(raw) as AppData) };
+    const raw = localStorage.getItem(key);
+    return raw ? { ...emptyData(), ...(JSON.parse(raw) as AppData) } : null;
   } catch {
-    // Corrupt or unavailable storage: start fresh.
-  }
-  return emptyData();
-}
-
-function saveLocal(data: AppData) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // Storage full or blocked; remote sync still applies when signed in.
+    return null;
   }
 }
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+function loadLocal(userId: string): AppData {
+  return readKey(storageKey(userId)) ?? emptyData();
+}
+
+function saveLocal(userId: string, data: AppData) {
+  try {
+    localStorage.setItem(storageKey(userId), JSON.stringify(data));
+  } catch {
+    // Storage full or blocked; the server copy still applies.
+  }
+}
+
+function takeLegacy(): AppData | null {
+  const legacy = readKey(LEGACY_KEY);
+  try {
+    localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    // ignore
+  }
+  return legacy && legacy.updatedAt > 0 ? legacy : null;
+}
+
+/** Holds one signed-in user's data: cached per user in localStorage and synced with /api/data. */
+export function StoreProvider({ user, children }: { user: SessionUser; children: ReactNode }) {
+  const userId = user.id;
   const [data, setData] = useState<AppData>(emptyData);
-  const [hydrated, setHydrated] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('local');
+  const [ready, setReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const dirty = useRef(false);
-  const { data: session } = authClient.useSession();
-  const user = session?.user ? { id: session.user.id, email: session.user.email, name: session.user.name } : null;
-  const userId = user?.id;
-
-  // localStorage is only available in the browser, so load it after the first render.
-  useEffect(() => {
-    setData(loadLocal());
-    setHydrated(true);
-  }, []);
 
   /** Replaces local data with a remote copy if it is newer. */
-  const adopt = useCallback((remote: AppData | null) => {
-    if (!remote) return;
-    setData((current) => {
-      if (remote.updatedAt <= current.updatedAt) return current;
-      saveLocal(remote);
-      return remote;
-    });
-  }, []);
+  const adopt = useCallback(
+    (remote: AppData | null) => {
+      if (!remote) return;
+      setData((current) => {
+        if (remote.updatedAt <= current.updatedAt) return current;
+        const next = { ...emptyData(), ...remote };
+        saveLocal(userId, next);
+        return next;
+      });
+    },
+    [userId],
+  );
 
-  // On sign-in: reconcile local and remote copies (newest wins), then poll for changes from other devices.
+  // Load the local cache, reconcile with the server (newest wins), then poll for other devices' changes.
   useEffect(() => {
-    if (!userId || !hydrated) {
-      setSyncStatus('local');
-      return;
-    }
     let cancelled = false;
-    setSyncStatus('syncing');
+    const local = loadLocal(userId);
+    setData(local);
+    setReady(true);
+
     fetchRemote()
       .then(async (remote) => {
         if (cancelled) return;
-        const local = loadLocal();
-        if (remote && remote.updatedAt >= local.updatedAt) adopt(remote);
-        else if (local.updatedAt > 0) await pushRemote(local);
+        // First sign-in on a device that has pre-account data and no server copy yet: keep that data.
+        const legacy = !remote && local.updatedAt === 0 ? takeLegacy() : null;
+        const candidate = legacy ?? local;
+        if (remote && remote.updatedAt >= candidate.updatedAt) adopt(remote);
+        else if (candidate.updatedAt > 0) {
+          if (legacy) {
+            setData(legacy);
+            saveLocal(userId, legacy);
+          }
+          await pushRemote(candidate);
+        }
         if (!cancelled) setSyncStatus('synced');
       })
       .catch((err) => {
@@ -108,13 +128,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [userId, hydrated, adopt]);
+  }, [userId, adopt]);
 
   // Persist locally on every change and push to the server after a short pause.
   useEffect(() => {
     if (!dirty.current) return;
-    saveLocal(data);
-    if (!userId) return;
+    saveLocal(userId, data);
     setSyncStatus('syncing');
     const timer = setTimeout(() => {
       pushRemote(data)
@@ -157,11 +176,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [mutate],
   );
 
+  const update = useCallback<StoreValue['update']>((patch) => mutate((d) => ({ ...d, ...patch })), [mutate]);
+
   const replaceAll = useCallback((next: AppData) => mutate(() => ({ ...emptyData(), ...next })), [mutate]);
 
   return (
-    <StoreContext.Provider value={{ data, user, syncStatus, upsert, remove, replaceAll }}>
-      {hydrated ? children : null}
+    <StoreContext.Provider value={{ data, user, syncStatus, upsert, remove, update, replaceAll }}>
+      {ready ? children : <div className="splash">A carregar…</div>}
     </StoreContext.Provider>
   );
 }

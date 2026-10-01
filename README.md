@@ -8,7 +8,8 @@ com projeção de cenários ao longo dos anos.
 - **Next.js (App Router) + React + TypeScript**, responsiva (sidebar em desktop, barra inferior em mobile, instalável como PWA)
 - **Neon** (Postgres serverless) para guardar os dados de cada utilizador
 - **Neon Auth** para login com email e password (as contas ficam no schema `neon_auth` da base de dados)
-- Os dados ficam também guardados localmente, por isso a app funciona offline e sem sessão iniciada
+- Login obrigatório: a página `/login` é a entrada da app e cada utilizador vê apenas os seus dados
+- Cotações de ETFs via Yahoo Finance (com Stooq como alternativa), sem chave de API
 
 ## Como correr
 
@@ -29,7 +30,8 @@ npm test                     # testes das fórmulas financeiras
 4. Gera um segredo com pelo menos 32 caracteres para `NEON_AUTH_COOKIE_SECRET` (ex.: `openssl rand -base64 32`).
 5. Corre `npm run db:migrate`.
 
-Sem `NEON_AUTH_BASE_URL`/`NEON_AUTH_COOKIE_SECRET` a app continua a funcionar, só com dados locais.
+Sem `NEON_AUTH_BASE_URL`/`NEON_AUTH_COOKIE_SECRET` não é possível entrar: a página de login mostra
+"O login ainda não está configurado neste servidor".
 
 ## Deploy no Vercel
 
@@ -52,13 +54,33 @@ para `PUT /api/data` passado menos de um segundo. Os outros dispositivos vão bu
 janela ganha foco e a cada 30 segundos. Em caso de conflito ganha a versão mais recente: o servidor recusa
 escritas mais antigas (409) e devolve a sua cópia.
 
+## Contas e dados de cada utilizador
+
+- Todas as páginas exigem sessão; sem sessão o utilizador é enviado para `/login` (entrar ou criar conta).
+- O perfil (nome, email, data de registo) vem do Neon Auth e aparece na barra lateral e em **Conta**, onde o nome pode ser alterado.
+- Os dados financeiros ficam em `user_data` (um documento por utilizador) e em cache local por utilizador
+  (`financas:data:<id>`), por isso duas pessoas no mesmo browser nunca veem os dados uma da outra.
+- Dados criados antes de existir login neste dispositivo passam para a primeira conta que entrar.
+
+## Investimentos e ETFs
+
+- **Análise de ETF:** escolhe um ETF (S&P 500, MSCI World, All-World, Nasdaq 100, Emergentes) ou qualquer ticker do
+  Yahoo Finance. A app mostra a cotação atual, rentabilidade anualizada (1/5/10 anos e total), volatilidade e pior queda.
+- **Simulação:** 2000 trajetórias construídas com blocos de 12 meses reais do histórico do ETF (*block bootstrap*),
+  com valor inicial e investimento mensal. Resultado: cenário pessimista (percentil 10), base (mediana) e otimista
+  (percentil 90), e probabilidade de terminar abaixo do valor investido.
+- **Usar nos Cenários:** aplica essas rentabilidades aos presets pessimista/base/otimista da página Cenários.
+- **Carteira:** um investimento com ticker e unidades é avaliado automaticamente ao preço de mercado.
+- As cotações vêm de `GET /api/market/<ticker>` (só para utilizadores autenticados), com cache de 1 hora.
+
 ## Estrutura
 
 ```
 src/
-  app/              rotas (App Router) e API: /api/auth (proxy para o Neon Auth), /api/data (sincronização)
+  app/              rotas (App Router): /login, (app)/* protegidas; API: /api/auth (Neon Auth), /api/data, /api/market
   views/            ecrãs: Resumo, Orçamento, Créditos, Subscrições, Cenários, Investimentos, Conta
-  lib/finance/      fórmulas puras (prestação, amortização, juros compostos) + testes
+  lib/finance/      fórmulas puras (prestação, amortização, juros compostos, estatísticas e simulação de ETFs) + testes
+  lib/market/       leitura das respostas do Yahoo Finance e Stooq
   lib/summary.ts    resumo mensal e projeção de cenários por ano
   lib/server/       ligação ao Neon e configuração do Neon Auth
   data/             tipos, store (localStorage + sincronização)
@@ -126,8 +148,8 @@ scripts/migrate.mjs cria a tabela user_data
 - [x] Créditos: prestação, plano de amortização, amortização antecipada (prazo vs. prestação, com comissão), variação da Euribor
 - [x] Subscrições: custo mensal/anual, renovações, poupança ao cancelar as pouco usadas
 - [x] Cenários: projeção até 40 anos com inflação, aumentos e presets pessimista/base/otimista
-- [x] Investimentos: carteira, alocação, mais-valias e imposto, juros compostos, independência financeira
-- [x] Login com email/password (Neon Auth) e sincronização entre dispositivos (Neon), exportação/importação JSON
+- [x] Investimentos: carteira com cotações reais, análise e simulação de ETFs, alocação, mais-valias e imposto, independência financeira
+- [x] Página de login, perfil do utilizador, dados isolados por conta e sincronizados entre dispositivos, exportação/importação JSON
 
 ## Roadmap sugerido
 1. **MVP:** despesas/rendimentos, créditos (simulador + amortização), subscrições, dashboard

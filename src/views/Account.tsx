@@ -1,14 +1,44 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStore } from '../data/store';
 import type { AppData } from '../data/types';
 import { authClient } from '../lib/auth-client';
+import { date } from '../lib/format';
 import { Card, Field } from '../components/ui';
+import { initials } from '../components/Layout';
 
 export function Account() {
   const { data, user, syncStatus, replaceAll } = useStore();
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState(user.name);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const saveProfile = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    try {
+      const res = await authClient.updateUser({ name: name.trim() });
+      if (res?.error) throw res.error;
+      setMessage({ ok: true, text: 'Perfil atualizado.' });
+    } catch (err) {
+      setMessage({ ok: false, text: (err as Error)?.message || 'Não foi possível atualizar o perfil.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await authClient.signOut();
+    } finally {
+      router.replace('/login');
+    }
+  };
 
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -29,23 +59,61 @@ export function Account() {
     }
   };
 
+  const counts = [
+    ['Rendimentos', data.incomes.length],
+    ['Despesas', data.expenses.length],
+    ['Créditos', data.loans.length],
+    ['Subscrições', data.subscriptions.length],
+    ['Investimentos', data.investments.length],
+  ] as const;
+
   return (
     <>
       <h1>Conta</h1>
-      <Card title="Sincronização entre dispositivos">
-        {user ? (
-          <>
-            <p>
-              Sessão iniciada como <strong>{user.email}</strong>. Estado: {syncStatus === 'synced' ? 'sincronizado' : syncStatus}.
-            </p>
-            <button className="ghost" onClick={() => authClient.signOut()}>
-              Terminar sessão
+      <div className="grid-2">
+        <Card title="Perfil">
+          <div className="profile-head">
+            <span className="avatar avatar-lg" aria-hidden>
+              {initials(user.name, user.email)}
+            </span>
+            <div>
+              <strong>{user.name || user.email}</strong>
+              <div className="muted small">{user.email}</div>
+              <div className="muted small">Membro desde {date(user.createdAt)}</div>
+            </div>
+          </div>
+          <form onSubmit={saveProfile} className="form-grid">
+            <Field label="Nome">
+              <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+            </Field>
+            <button type="submit" className="primary" disabled={saving || name.trim() === user.name}>
+              Guardar
             </button>
-          </>
-        ) : (
-          <AuthForm />
-        )}
-      </Card>
+            {message && <p className={`full ${message.ok ? 'good' : 'bad'}`}>{message.text}</p>}
+          </form>
+          <button className="danger" onClick={signOut}>
+            Terminar sessão
+          </button>
+        </Card>
+
+        <Card title="Os teus dados">
+          <p className="muted small">
+            Guardados na tua conta e sincronizados entre dispositivos. Estado:{' '}
+            <span className={`sync-${syncStatus}`}>
+              {syncStatus === 'synced' ? 'sincronizado' : syncStatus === 'syncing' ? 'a sincronizar…' : 'erro de sincronização'}
+            </span>
+            {data.updatedAt > 0 && <> · última alteração {new Date(data.updatedAt).toLocaleString('pt-PT')}</>}
+          </p>
+          <ul className="list">
+            {counts.map(([label, n]) => (
+              <li key={label}>
+                <span>{label}</span>
+                <strong>{n}</strong>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
 
       <Card title="Cópia de segurança">
         <div className="preset-row">
@@ -67,88 +135,5 @@ export function Account() {
         </div>
       </Card>
     </>
-  );
-}
-
-// Neon Auth reports Supabase-style codes; the upper-case ones are Better Auth's.
-const AUTH_ERRORS: Record<string, string> = {
-  invalid_credentials: 'Email ou password incorretos.',
-  INVALID_EMAIL_OR_PASSWORD: 'Email ou password incorretos.',
-  user_already_exists: 'Já existe uma conta com este email.',
-  email_exists: 'Já existe uma conta com este email.',
-  USER_ALREADY_EXISTS: 'Já existe uma conta com este email.',
-  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: 'Já existe uma conta com este email.',
-  weak_password: 'A password é demasiado fraca (mínimo 8 caracteres).',
-  PASSWORD_TOO_SHORT: 'A password é demasiado curta.',
-  email_address_invalid: 'O email não é válido.',
-  email_not_confirmed: 'Confirma o teu email antes de entrar.',
-  over_request_rate_limit: 'Demasiadas tentativas. Espera um pouco e tenta de novo.',
-  AUTH_NOT_CONFIGURED: 'O login ainda não está configurado neste servidor.',
-};
-
-function authErrorMessage(err: unknown): string {
-  const e = err as { code?: string; message?: string } | null;
-  return (e?.code && AUTH_ERRORS[e.code]) || e?.message || 'Não foi possível entrar. Tenta novamente.';
-}
-
-function AuthForm() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      // The Neon Auth client throws on API errors; older Better Auth clients return { error } instead.
-      const { error } =
-        mode === 'signin'
-          ? await authClient.signIn.email({ email, password })
-          : await authClient.signUp.email({ email, password, name: name || email.split('@')[0] });
-      if (error) setError(authErrorMessage(error));
-    } catch (err) {
-      setError(authErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit}>
-      <p className="muted">Entra para sincronizar os teus dados entre o computador e o telemóvel.</p>
-      <div className="form-grid">
-        {mode === 'signup' && (
-          <Field label="Nome">
-            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-          </Field>
-        )}
-        <Field label="Email">
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-        </Field>
-        <Field label="Password">
-          <input
-            type="password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-          />
-        </Field>
-      </div>
-      {error && <p className="bad">{error}</p>}
-      <div className="preset-row">
-        <button type="submit" className="primary" disabled={busy}>
-          {mode === 'signin' ? 'Entrar' : 'Criar conta'}
-        </button>
-        <button type="button" className="ghost" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
-          {mode === 'signin' ? 'Criar conta nova' : 'Já tenho conta'}
-        </button>
-      </div>
-    </form>
   );
 }

@@ -61,6 +61,20 @@ export interface Investment {
   invested: number;
   currentValue: number;
   monthlyContribution: number;
+  /** Optional market ticker (e.g. SXR8.DE); with `units`, the value follows the live price. */
+  ticker?: string;
+  units?: number;
+}
+
+/** Return assumptions derived from an ETF's history, used by the scenario presets. */
+export interface MarketAssumptions {
+  symbol: string;
+  name: string;
+  pessimistic: number;
+  base: number;
+  optimistic: number;
+  /** Epoch ms when the analysis was applied. */
+  appliedAt: number;
 }
 
 export interface AppData {
@@ -72,6 +86,7 @@ export interface AppData {
   loans: Loan[];
   subscriptions: Subscription[];
   investments: Investment[];
+  marketAssumptions?: MarketAssumptions;
 }
 
 export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments';
