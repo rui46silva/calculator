@@ -37,7 +37,7 @@ O `NEON_AUTH_COOKIE_SECRET` nunca é criado pela integração: tens de o gerar e
 **Diagnóstico:** abre `/api/health` na app publicada. Mostra se a autenticação está configurada, se o servidor
 do Neon Auth responde, se a base de dados está acessível e qual a origem da app (sem revelar segredos).
 Se o login disser que o endereço não está autorizado, adiciona essa origem aos domínios permitidos em Neon → Auth.
-Se o Neon Auth exigir confirmação de email, a conta é criada e a app pede para abrir o link do email antes de entrar.
+Se o Neon Auth exigir confirmação de email, a criação de conta tem um passo extra para o código de 6 dígitos.
 
 ## Deploy no Vercel
 
@@ -63,6 +63,9 @@ escritas mais antigas (409) e devolve a sua cópia.
 ## Contas e dados de cada utilizador
 
 - Todas as páginas exigem sessão; sem sessão o utilizador é enviado para `/login` (entrar ou criar conta).
+- Criar conta: **Dados → Código → Pronto**. Depois do formulário, a app pede o código de 6 dígitos que o Neon Auth
+  envia por email (com reenvio após 30 s e opção de mudar o email) e termina com um popup animado de boas-vindas.
+  Quem tenta entrar com uma conta ainda não confirmada recebe um código novo e passa pelo mesmo passo.
 - O perfil (nome, email, data de registo) vem do Neon Auth e aparece na barra lateral e em **Conta**, onde o nome pode ser alterado.
 - Os dados financeiros ficam em `user_data` (um documento por utilizador) e em cache local por utilizador
   (`financas:data:<id>`), por isso duas pessoas no mesmo browser nunca veem os dados uma da outra.

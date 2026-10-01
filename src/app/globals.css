@@ -263,3 +263,55 @@ button:disabled { opacity: 0.5; cursor: default; }
   .etf-head { flex-direction: column; align-items: flex-start; }
 }
 .form-msg { margin: 0; padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; border: 1px solid currentColor; }
+
+/* Sign-up steps & verification code */
+.steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 0 0 16px; counter-reset: step; font-size: 0.75rem; color: var(--muted); }
+.steps li { flex: 1; counter-increment: step; display: flex; flex-direction: column; gap: 6px; }
+.steps li::before { content: ''; height: 4px; border-radius: 99px; background: var(--border); transition: background 0.3s; }
+.steps li.on, .steps li.done { color: var(--accent); font-weight: 600; }
+.steps li.on::before, .steps li.done::before { background: var(--accent); }
+.otp-input { font-size: 1.6rem; letter-spacing: 0.5em; text-align: center; font-variant-numeric: tabular-nums; padding: 10px; }
+.otp-actions { display: flex; justify-content: center; gap: 8px; align-items: center; }
+button.link:disabled { color: var(--muted); text-decoration: none; }
+
+/* Welcome dialog */
+.welcome {
+  border: none; border-radius: 16px; padding: 28px 28px 24px; width: min(420px, 100vw - 32px);
+  background: var(--surface); color: var(--text); text-align: center;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 0.25);
+}
+.welcome[open] { animation: welcome-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+.welcome::backdrop { background: rgb(0 0 0 / 0.45); animation: fade-in 0.3s both; }
+.welcome h2 { font-size: 1.4rem; margin: 8px 0; animation: rise 0.4s 0.55s both; }
+.welcome p { color: var(--muted); margin: 0 0 16px; animation: rise 0.4s 0.65s both; }
+.welcome-next { list-style: none; padding: 0; margin: 0 0 20px; text-align: left; display: grid; gap: 8px; font-size: 0.9rem; }
+.welcome-next li { padding: 8px 12px; border-radius: 8px; background: var(--bg); animation: rise 0.4s both; }
+.welcome-next li:nth-child(1) { animation-delay: 0.75s; }
+.welcome-next li:nth-child(2) { animation-delay: 0.85s; }
+.welcome-next li:nth-child(3) { animation-delay: 0.95s; }
+.welcome button { width: 100%; padding: 10px; animation: rise 0.4s 1.05s both; }
+.welcome-art { position: relative; width: 88px; height: 88px; margin: 0 auto; }
+.welcome-check { width: 88px; height: 88px; }
+.welcome-check circle { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; stroke-dasharray: 152; stroke-dashoffset: 152; animation: draw 0.6s 0.15s ease-out forwards; }
+.welcome-check path { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw 0.35s 0.6s ease-out forwards; }
+.confetti {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 2px; opacity: 0;
+  background: var(--accent);
+  --angle: calc(var(--i) * 25.7deg);
+  animation: burst 0.9s calc(0.55s + var(--i) * 0.015s) ease-out forwards;
+}
+.confetti:nth-child(3n) { background: var(--series-1); }
+.confetti:nth-child(3n + 1) { background: var(--series-2); border-radius: 50%; }
+@keyframes welcome-in { from { opacity: 0; transform: translateY(16px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes burst {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-70px) scale(0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome[open], .welcome::backdrop, .welcome h2, .welcome p, .welcome-next li, .welcome button { animation: none; }
+  .welcome-check circle, .welcome-check path { animation: none; stroke-dashoffset: 0; }
+  .confetti { display: none; }
+}
