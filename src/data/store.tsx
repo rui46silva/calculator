@@ -1,17 +1,25 @@
+'use client';
+
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Session } from '@supabase/supabase-js';
-import { supabase } from './supabase';
-import { fetchRemote, pushRemote, subscribeRemote } from './sync';
+import { authClient } from '@/lib/auth-client';
+import { ConflictError, fetchRemote, pushRemote } from './sync';
 import { emptyData, type AppData, type Collection } from './types';
 
 const STORAGE_KEY = 'financas:data';
 const PUSH_DELAY_MS = 800;
+const POLL_INTERVAL_MS = 30_000;
 
 export type SyncStatus = 'local' | 'syncing' | 'synced' | 'error';
 
+export interface SessionUser {
+  id: string;
+  email: string;
+  name: string;
+}
+
 interface StoreValue {
   data: AppData;
-  session: Session | null;
+  user: SessionUser | null;
   syncStatus: SyncStatus;
   upsert<C extends Collection>(collection: C, item: AppData[C][number]): void;
   remove(collection: Collection, id: string): void;
@@ -39,72 +47,91 @@ function saveLocal(data: AppData) {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<AppData>(loadLocal);
-  const [session, setSession] = useState<Session | null>(null);
+  const [data, setData] = useState<AppData>(emptyData);
+  const [hydrated, setHydrated] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('local');
   const dirty = useRef(false);
-  const userId = session?.user.id;
+  const { data: session } = authClient.useSession();
+  const user = session?.user ? { id: session.user.id, email: session.user.email, name: session.user.name } : null;
+  const userId = user?.id;
 
+  // localStorage is only available in the browser, so load it after the first render.
   useEffect(() => {
-    if (!supabase) return;
-    void supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
+    setData(loadLocal());
+    setHydrated(true);
   }, []);
 
-  // On sign-in: reconcile local and remote copies (newest wins), then listen for other devices.
+  /** Replaces local data with a remote copy if it is newer. */
+  const adopt = useCallback((remote: AppData | null) => {
+    if (!remote) return;
+    setData((current) => {
+      if (remote.updatedAt <= current.updatedAt) return current;
+      saveLocal(remote);
+      return remote;
+    });
+  }, []);
+
+  // On sign-in: reconcile local and remote copies (newest wins), then poll for changes from other devices.
   useEffect(() => {
-    if (!supabase || !userId) {
+    if (!userId || !hydrated) {
       setSyncStatus('local');
       return;
     }
-    const client = supabase;
     let cancelled = false;
     setSyncStatus('syncing');
-    fetchRemote(client, userId)
+    fetchRemote()
       .then(async (remote) => {
         if (cancelled) return;
         const local = loadLocal();
-        if (remote && remote.updatedAt >= local.updatedAt) {
-          setData(remote);
-          saveLocal(remote);
-        } else if (local.updatedAt > 0) {
-          await pushRemote(client, userId, local);
-        }
+        if (remote && remote.updatedAt >= local.updatedAt) adopt(remote);
+        else if (local.updatedAt > 0) await pushRemote(local);
         if (!cancelled) setSyncStatus('synced');
       })
-      .catch(() => !cancelled && setSyncStatus('error'));
-
-    const unsubscribe = subscribeRemote(client, userId, (remote) => {
-      setData((current) => {
-        if (remote.updatedAt <= current.updatedAt) return current;
-        saveLocal(remote);
-        return remote;
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof ConflictError) {
+          adopt(err.server);
+          setSyncStatus('synced');
+        } else setSyncStatus('error');
       });
-    });
+
+    const refresh = () => {
+      if (document.visibilityState !== 'visible' || dirty.current) return;
+      fetchRemote().then(adopt, () => setSyncStatus('error'));
+    };
+    const timer = setInterval(refresh, POLL_INTERVAL_MS);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
     return () => {
       cancelled = true;
-      unsubscribe();
+      clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
     };
-  }, [userId]);
+  }, [userId, hydrated, adopt]);
 
-  // Persist locally on every change and push to Supabase after a short pause.
+  // Persist locally on every change and push to the server after a short pause.
   useEffect(() => {
     if (!dirty.current) return;
     saveLocal(data);
-    if (!supabase || !userId) return;
-    const client = supabase;
+    if (!userId) return;
     setSyncStatus('syncing');
     const timer = setTimeout(() => {
-      pushRemote(client, userId, data)
+      pushRemote(data)
         .then(() => {
           dirty.current = false;
           setSyncStatus('synced');
         })
-        .catch(() => setSyncStatus('error'));
+        .catch((err) => {
+          if (err instanceof ConflictError) {
+            dirty.current = false;
+            adopt(err.server);
+            setSyncStatus('synced');
+          } else setSyncStatus('error');
+        });
     }, PUSH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [data, userId]);
+  }, [data, userId, adopt]);
 
   const mutate = useCallback((fn: (d: AppData) => AppData) => {
     dirty.current = true;
@@ -133,8 +160,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const replaceAll = useCallback((next: AppData) => mutate(() => ({ ...emptyData(), ...next })), [mutate]);
 
   return (
-    <StoreContext.Provider value={{ data, session, syncStatus, upsert, remove, replaceAll }}>
-      {children}
+    <StoreContext.Provider value={{ data, user, syncStatus, upsert, remove, replaceAll }}>
+      {hydrated ? children : null}
     </StoreContext.Provider>
   );
 }

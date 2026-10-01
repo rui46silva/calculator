@@ -1,35 +1,24 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AppData } from './types';
 
-const TABLE = 'user_data';
-
-export async function fetchRemote(client: SupabaseClient, userId: string): Promise<AppData | null> {
-  const { data, error } = await client.from(TABLE).select('data').eq('user_id', userId).maybeSingle();
-  if (error) throw error;
-  return (data?.data as AppData | undefined) ?? null;
+export class ConflictError extends Error {
+  constructor(public readonly server: AppData | null) {
+    super('server has newer data');
+  }
 }
 
-export async function pushRemote(client: SupabaseClient, userId: string, appData: AppData): Promise<void> {
-  const { error } = await client
-    .from(TABLE)
-    .upsert({ user_id: userId, data: appData, updated_at: new Date(appData.updatedAt).toISOString() });
-  if (error) throw error;
+export async function fetchRemote(): Promise<AppData | null> {
+  const res = await fetch('/api/data', { cache: 'no-store' });
+  if (!res.ok) throw new Error(`GET /api/data ${res.status}`);
+  return ((await res.json()) as { data: AppData | null }).data;
 }
 
-/** Calls `onChange` whenever another device saves new data for this user. */
-export function subscribeRemote(client: SupabaseClient, userId: string, onChange: (data: AppData) => void) {
-  const channel = client
-    .channel(`user_data:${userId}`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: TABLE, filter: `user_id=eq.${userId}` },
-      (payload) => {
-        const row = payload.new as { data?: AppData } | undefined;
-        if (row?.data) onChange(row.data);
-      },
-    )
-    .subscribe();
-  return () => {
-    void client.removeChannel(channel);
-  };
+/** Throws ConflictError (with the server's copy) when the server already holds newer data. */
+export async function pushRemote(data: AppData): Promise<void> {
+  const res = await fetch('/api/data', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (res.status === 409) throw new ConflictError(((await res.json()) as { data: AppData | null }).data);
+  if (!res.ok) throw new Error(`PUT /api/data ${res.status}`);
 }

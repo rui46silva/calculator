@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 import { useStore } from '../data/store';
 import { Card, Stat } from '../components/ui';
 import { effortRate } from '../lib/finance/loan';
@@ -30,8 +32,8 @@ export function Dashboard() {
       {isEmpty && (
         <Card>
           <p>
-            Começa por adicionar os teus <Link to="/orcamento">rendimentos e despesas</Link>,{' '}
-            <Link to="/creditos">créditos</Link> e <Link to="/subscricoes">subscrições</Link>.
+            Começa por adicionar os teus <Link href="/orcamento">rendimentos e despesas</Link>,{' '}
+            <Link href="/creditos">créditos</Link> e <Link href="/subscricoes">subscrições</Link>.
           </p>
         </Card>
       )}

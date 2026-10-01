@@ -5,38 +5,53 @@ com projeção de cenários ao longo dos anos.
 
 ## Stack
 
-- **React + TypeScript** com Vite, responsiva (sidebar em desktop, barra inferior em mobile, instalável como PWA)
-- **Supabase** para autenticação (link por email) e sincronização entre dispositivos
-- Os dados ficam também guardados localmente, por isso a app funciona offline e sem Supabase configurado
+- **Next.js (App Router) + React + TypeScript**, responsiva (sidebar em desktop, barra inferior em mobile, instalável como PWA)
+- **Neon** (Postgres serverless) para guardar os dados de cada utilizador
+- **Better Auth** para login com email e password (contas guardadas no próprio Neon)
+- Os dados ficam também guardados localmente, por isso a app funciona offline e sem sessão iniciada
 
 ## Como correr
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
-npm test           # testes das fórmulas financeiras
-npm run build
+cp .env.example .env.local   # preencher DATABASE_URL e BETTER_AUTH_SECRET
+npm run db:migrate           # cria as tabelas no Neon (pode ser repetido)
+npm run dev                  # http://localhost:3000
+npm test                     # testes das fórmulas financeiras
 ```
 
-### Ativar a sincronização entre dispositivos
+### Neon
 
-1. Cria um projeto gratuito em [supabase.com](https://supabase.com).
-2. No **SQL Editor**, executa [`supabase/schema.sql`](supabase/schema.sql).
-3. Em **Authentication → URL Configuration**, adiciona o URL da app (ex.: `http://localhost:5173`) aos *Redirect URLs*.
-4. Copia `.env.example` para `.env.local` e preenche `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (**Project Settings → API**).
-5. Na app, abre **Conta** e entra com o teu email.
+1. Cria um projeto em [neon.tech](https://neon.tech) (ou pela integração Neon no Vercel, que preenche o `DATABASE_URL` automaticamente).
+2. Copia a *pooled connection string* para `DATABASE_URL`.
+3. Gera um segredo com `openssl rand -base64 32` para `BETTER_AUTH_SECRET`.
+4. Corre `npm run db:migrate`.
 
-Cada utilizador tem um documento JSON na tabela `user_data`, protegido por RLS. As alterações são
-enviadas automaticamente e chegam aos outros dispositivos em tempo real; em caso de conflito ganha a versão mais recente.
+## Deploy no Vercel
+
+1. Importa o repositório em [vercel.com/new](https://vercel.com/new) e escolhe esta branch. O Next.js é detetado automaticamente.
+2. Em **Settings → Environment Variables** define `DATABASE_URL`, `BETTER_AUTH_SECRET` e
+   `BETTER_AUTH_URL` (o URL público, ex.: `https://calculator.vercel.app`).
+3. Corre `npm run db:migrate` uma vez contra a base de dados de produção.
+
+## Como funciona a sincronização
+
+Cada utilizador tem um documento JSON na tabela `user_data`. As alterações são gravadas localmente e enviadas
+para `PUT /api/data` passado menos de um segundo. Os outros dispositivos vão buscar a versão mais recente quando a
+janela ganha foco e a cada 30 segundos. Em caso de conflito ganha a versão mais recente: o servidor recusa
+escritas mais antigas (409) e devolve a sua cópia.
 
 ## Estrutura
 
 ```
 src/
-  lib/finance/   fórmulas puras (prestação, amortização, juros compostos) + testes
-  lib/summary.ts resumo mensal e projeção de cenários por ano
-  data/          tipos, store (localStorage + Supabase) e sincronização
-  pages/         Resumo, Orçamento, Créditos, Subscrições, Cenários, Investimentos, Conta
+  app/              rotas (App Router) e API: /api/auth (Better Auth), /api/data (sincronização)
+  views/            ecrãs: Resumo, Orçamento, Créditos, Subscrições, Cenários, Investimentos, Conta
+  lib/finance/      fórmulas puras (prestação, amortização, juros compostos) + testes
+  lib/summary.ts    resumo mensal e projeção de cenários por ano
+  lib/server/       ligação ao Neon e configuração do Better Auth
+  data/             tipos, store (localStorage + sincronização)
+scripts/migrate.mjs cria as tabelas
 ```
 
 ## Módulos e features propostas
@@ -101,7 +116,7 @@ src/
 - [x] Subscrições: custo mensal/anual, renovações, poupança ao cancelar as pouco usadas
 - [x] Cenários: projeção até 40 anos com inflação, aumentos e presets pessimista/base/otimista
 - [x] Investimentos: carteira, alocação, mais-valias e imposto, juros compostos, independência financeira
-- [x] Sincronização entre dispositivos (Supabase) e exportação/importação JSON
+- [x] Login com email/password e sincronização entre dispositivos (Neon), exportação/importação JSON
 
 ## Roadmap sugerido
 1. **MVP:** despesas/rendimentos, créditos (simulador + amortização), subscrições, dashboard

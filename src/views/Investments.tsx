@@ -1,3 +1,5 @@
+'use client';
+
 import { useMemo, useState } from 'react';
 import { useStore, newId } from '../data/store';
 import { ASSET_CLASSES, type Investment } from '../data/types';

@@ -1,3 +1,5 @@
+'use client';
+
 import { useStore, newId } from '../data/store';
 import type { Subscription } from '../data/types';
 import { Card, Empty, Field, NumberInput, Select, Stat } from '../components/ui';

@@ -1,3 +1,5 @@
+'use client';
+
 import { useMemo, useState } from 'react';
 import { useStore } from '../data/store';
 import { Card, Field, NumberInput, PercentInput, Stat } from '../components/ui';

@@ -1,3 +1,5 @@
+'use client';
+
 import { useStore, newId } from '../data/store';
 import { EXPENSE_CATEGORIES, type Expense, type Income } from '../data/types';
 import { Card, Empty, Field, NumberInput, Select } from '../components/ui';
