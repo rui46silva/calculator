@@ -1,6 +1,5 @@
-import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/server/auth';
+import { getAuth } from '@/lib/server/auth';
 import { pool } from '@/lib/server/db';
 import type { AppData } from '@/data/types';
 
@@ -9,8 +8,10 @@ const NO_STORE = { 'Cache-Control': 'no-store' };
 const COLLECTIONS = ['incomes', 'expenses', 'loans', 'subscriptions', 'investments'] as const;
 
 async function userId(): Promise<string | null> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  return session?.user.id ?? null;
+  const auth = getAuth();
+  if (!auth) return null;
+  const { data } = await auth.getSession();
+  return data?.user?.id ?? null;
 }
 
 function isAppData(x: unknown): x is AppData {

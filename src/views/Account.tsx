@@ -70,6 +70,27 @@ export function Account() {
   );
 }
 
+// Neon Auth reports Supabase-style codes; the upper-case ones are Better Auth's.
+const AUTH_ERRORS: Record<string, string> = {
+  invalid_credentials: 'Email ou password incorretos.',
+  INVALID_EMAIL_OR_PASSWORD: 'Email ou password incorretos.',
+  user_already_exists: 'Já existe uma conta com este email.',
+  email_exists: 'Já existe uma conta com este email.',
+  USER_ALREADY_EXISTS: 'Já existe uma conta com este email.',
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: 'Já existe uma conta com este email.',
+  weak_password: 'A password é demasiado fraca (mínimo 8 caracteres).',
+  PASSWORD_TOO_SHORT: 'A password é demasiado curta.',
+  email_address_invalid: 'O email não é válido.',
+  email_not_confirmed: 'Confirma o teu email antes de entrar.',
+  over_request_rate_limit: 'Demasiadas tentativas. Espera um pouco e tenta de novo.',
+  AUTH_NOT_CONFIGURED: 'O login ainda não está configurado neste servidor.',
+};
+
+function authErrorMessage(err: unknown): string {
+  const e = err as { code?: string; message?: string } | null;
+  return (e?.code && AUTH_ERRORS[e.code]) || e?.message || 'Não foi possível entrar. Tenta novamente.';
+}
+
 function AuthForm() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
@@ -82,12 +103,18 @@ function AuthForm() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { error } =
-      mode === 'signin'
-        ? await authClient.signIn.email({ email, password })
-        : await authClient.signUp.email({ email, password, name: name || email.split('@')[0] });
-    setBusy(false);
-    if (error) setError(error.message ?? 'Não foi possível entrar.');
+    try {
+      // The Neon Auth client throws on API errors; older Better Auth clients return { error } instead.
+      const { error } =
+        mode === 'signin'
+          ? await authClient.signIn.email({ email, password })
+          : await authClient.signUp.email({ email, password, name: name || email.split('@')[0] });
+      if (error) setError(authErrorMessage(error));
+    } catch (err) {
+      setError(authErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

@@ -7,37 +7,43 @@ com projeção de cenários ao longo dos anos.
 
 - **Next.js (App Router) + React + TypeScript**, responsiva (sidebar em desktop, barra inferior em mobile, instalável como PWA)
 - **Neon** (Postgres serverless) para guardar os dados de cada utilizador
-- **Better Auth** para login com email e password (contas guardadas no próprio Neon)
+- **Neon Auth** para login com email e password (as contas ficam no schema `neon_auth` da base de dados)
 - Os dados ficam também guardados localmente, por isso a app funciona offline e sem sessão iniciada
 
 ## Como correr
 
 ```bash
 npm install
-cp .env.example .env.local   # preencher DATABASE_URL e BETTER_AUTH_SECRET
+cp .env.example .env.local   # preencher DATABASE_URL, NEON_AUTH_BASE_URL e NEON_AUTH_COOKIE_SECRET
 npm run db:migrate           # cria as tabelas no Neon (pode ser repetido)
 npm run dev                  # http://localhost:3000
 npm test                     # testes das fórmulas financeiras
 ```
 
-### Neon
+### Neon e Neon Auth
 
 1. Cria um projeto em [neon.tech](https://neon.tech) (ou pela integração Neon no Vercel, que preenche o `DATABASE_URL` automaticamente).
 2. Copia a *pooled connection string* para `DATABASE_URL`.
-3. Gera um segredo com `openssl rand -base64 32` para `BETTER_AUTH_SECRET`.
-4. Corre `npm run db:migrate`.
+3. Na consola do Neon, abre o projeto → **Auth**, ativa o Neon Auth e copia o **Auth URL** para `NEON_AUTH_BASE_URL`.
+   Confirma que **Email & password** está ativo nos métodos de login.
+4. Gera um segredo com pelo menos 32 caracteres para `NEON_AUTH_COOKIE_SECRET` (ex.: `openssl rand -base64 32`).
+5. Corre `npm run db:migrate`.
+
+Sem `NEON_AUTH_BASE_URL`/`NEON_AUTH_COOKIE_SECRET` a app continua a funcionar, só com dados locais.
 
 ## Deploy no Vercel
 
 1. Importa o repositório em [vercel.com/new](https://vercel.com/new) e escolhe esta branch. O Next.js é detetado automaticamente.
-2. Em **Settings → Environment Variables** define `DATABASE_URL`, `BETTER_AUTH_SECRET` e
-   `BETTER_AUTH_URL` (o URL público, ex.: `https://calculator.vercel.app`).
+2. Em **Settings → Environment Variables** define `DATABASE_URL`, `NEON_AUTH_BASE_URL` e `NEON_AUTH_COOKIE_SECRET`.
 3. Faz deploy. As tabelas são criadas automaticamente: o Vercel corre o script `vercel-build`
    (`node scripts/migrate.mjs && next build`), que aplica as migrações antes de cada build.
 
 A migração pode ser repetida sem problemas (só cria o que falta). Usa `DATABASE_URL_UNPOOLED` (ligação direta,
 criada pela integração Neon do Vercel) quando existe, senão `DATABASE_URL`. Num deploy de produção sem
 `DATABASE_URL` o build falha com uma mensagem clara; nos previews sem base de dados a migração é ignorada.
+
+O `.npmrc` usa `legacy-peer-deps=true` porque o `@neondatabase/auth` (beta) inclui o better-auth 1.6, cujos
+peers opcionais fazem o npm falhar ao lado do vitest 5.
 
 ## Como funciona a sincronização
 
@@ -50,13 +56,13 @@ escritas mais antigas (409) e devolve a sua cópia.
 
 ```
 src/
-  app/              rotas (App Router) e API: /api/auth (Better Auth), /api/data (sincronização)
+  app/              rotas (App Router) e API: /api/auth (proxy para o Neon Auth), /api/data (sincronização)
   views/            ecrãs: Resumo, Orçamento, Créditos, Subscrições, Cenários, Investimentos, Conta
   lib/finance/      fórmulas puras (prestação, amortização, juros compostos) + testes
   lib/summary.ts    resumo mensal e projeção de cenários por ano
-  lib/server/       ligação ao Neon e configuração do Better Auth
+  lib/server/       ligação ao Neon e configuração do Neon Auth
   data/             tipos, store (localStorage + sincronização)
-scripts/migrate.mjs cria as tabelas
+scripts/migrate.mjs cria a tabela user_data
 ```
 
 ## Módulos e features propostas
@@ -121,7 +127,7 @@ scripts/migrate.mjs cria as tabelas
 - [x] Subscrições: custo mensal/anual, renovações, poupança ao cancelar as pouco usadas
 - [x] Cenários: projeção até 40 anos com inflação, aumentos e presets pessimista/base/otimista
 - [x] Investimentos: carteira, alocação, mais-valias e imposto, juros compostos, independência financeira
-- [x] Login com email/password e sincronização entre dispositivos (Neon), exportação/importação JSON
+- [x] Login com email/password (Neon Auth) e sincronização entre dispositivos (Neon), exportação/importação JSON
 
 ## Roadmap sugerido
 1. **MVP:** despesas/rendimentos, créditos (simulador + amortização), subscrições, dashboard
