@@ -5,7 +5,6 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Finanças Pessoais',
   description: 'Despesas, créditos, subscrições, cenários e investimentos.',
-  manifest: '/manifest.webmanifest',
   icons: { icon: '/icon.svg' },
 };
 
@@ -19,6 +18,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-PT">
+      <head>
+        {/* With credentials, so the manifest also loads behind Vercel's deployment protection. */}
+        <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
+      </head>
       <body>{children}</body>
     </html>
   );
