@@ -3,6 +3,42 @@
 Aplicação para gerir despesas pessoais, créditos, subscrições e investimentos,
 com projeção de cenários ao longo dos anos.
 
+## Stack
+
+- **React + TypeScript** com Vite, responsiva (sidebar em desktop, barra inferior em mobile, instalável como PWA)
+- **Supabase** para autenticação (link por email) e sincronização entre dispositivos
+- Os dados ficam também guardados localmente, por isso a app funciona offline e sem Supabase configurado
+
+## Como correr
+
+```bash
+npm install
+npm run dev        # http://localhost:5173
+npm test           # testes das fórmulas financeiras
+npm run build
+```
+
+### Ativar a sincronização entre dispositivos
+
+1. Cria um projeto gratuito em [supabase.com](https://supabase.com).
+2. No **SQL Editor**, executa [`supabase/schema.sql`](supabase/schema.sql).
+3. Em **Authentication → URL Configuration**, adiciona o URL da app (ex.: `http://localhost:5173`) aos *Redirect URLs*.
+4. Copia `.env.example` para `.env.local` e preenche `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (**Project Settings → API**).
+5. Na app, abre **Conta** e entra com o teu email.
+
+Cada utilizador tem um documento JSON na tabela `user_data`, protegido por RLS. As alterações são
+enviadas automaticamente e chegam aos outros dispositivos em tempo real; em caso de conflito ganha a versão mais recente.
+
+## Estrutura
+
+```
+src/
+  lib/finance/   fórmulas puras (prestação, amortização, juros compostos) + testes
+  lib/summary.ts resumo mensal e projeção de cenários por ano
+  data/          tipos, store (localStorage + Supabase) e sincronização
+  pages/         Resumo, Orçamento, Créditos, Subscrições, Cenários, Investimentos, Conta
+```
+
 ## Módulos e features propostas
 
 ### 1. Dashboard
@@ -56,6 +92,16 @@ com projeção de cenários ao longo dos anos.
 - Exportação/importação de dados (CSV/JSON) e backups
 - Dados guardados localmente (privacidade)
 - Multi-moeda
+
+## Estado atual (v0.1)
+
+- [x] Resumo: saldo mensal, taxa de esforço, dívida, património, renovações próximas
+- [x] Orçamento: rendimentos e despesas por categoria e frequência
+- [x] Créditos: prestação, plano de amortização, amortização antecipada (prazo vs. prestação, com comissão), variação da Euribor
+- [x] Subscrições: custo mensal/anual, renovações, poupança ao cancelar as pouco usadas
+- [x] Cenários: projeção até 40 anos com inflação, aumentos e presets pessimista/base/otimista
+- [x] Investimentos: carteira, alocação, mais-valias e imposto, juros compostos, independência financeira
+- [x] Sincronização entre dispositivos (Supabase) e exportação/importação JSON
 
 ## Roadmap sugerido
 1. **MVP:** despesas/rendimentos, créditos (simulador + amortização), subscrições, dashboard
