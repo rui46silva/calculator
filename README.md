@@ -32,7 +32,12 @@ npm test                     # testes das fórmulas financeiras
 1. Importa o repositório em [vercel.com/new](https://vercel.com/new) e escolhe esta branch. O Next.js é detetado automaticamente.
 2. Em **Settings → Environment Variables** define `DATABASE_URL`, `BETTER_AUTH_SECRET` e
    `BETTER_AUTH_URL` (o URL público, ex.: `https://calculator.vercel.app`).
-3. Corre `npm run db:migrate` uma vez contra a base de dados de produção.
+3. Faz deploy. As tabelas são criadas automaticamente: o Vercel corre o script `vercel-build`
+   (`node scripts/migrate.mjs && next build`), que aplica as migrações antes de cada build.
+
+A migração pode ser repetida sem problemas (só cria o que falta). Usa `DATABASE_URL_UNPOOLED` (ligação direta,
+criada pela integração Neon do Vercel) quando existe, senão `DATABASE_URL`. Num deploy de produção sem
+`DATABASE_URL` o build falha com uma mensagem clara; nos previews sem base de dados a migração é ignorada.
 
 ## Como funciona a sincronização
 

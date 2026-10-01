@@ -1,14 +1,23 @@
 // Creates/updates the database schema: Better Auth tables + the app's user_data table.
+// Idempotent, so it runs before every Vercel build (see "vercel-build" in package.json).
 // Usage: DATABASE_URL=... npm run db:migrate
 import pg from 'pg';
 import { getMigrations } from 'better-auth/db/migration';
 
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is not set');
-  process.exit(1);
+// Prefer Neon's direct (unpooled) connection for schema changes when the Vercel integration provides it.
+const connectionString = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+
+if (!connectionString) {
+  // A production deploy without a database is a misconfiguration; elsewhere (e.g. previews) just skip.
+  if (process.env.VERCEL_ENV === 'production') {
+    console.error('DATABASE_URL is not set: configure it in Vercel → Settings → Environment Variables');
+    process.exit(1);
+  }
+  console.warn('DATABASE_URL is not set, skipping database migration');
+  process.exit(0);
 }
 
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new pg.Pool({ connectionString });
 
 // Must match the schema-relevant options in src/lib/server/auth.ts.
 const { runMigrations, toBeCreated, toBeAdded } = await getMigrations({
