@@ -24,7 +24,7 @@ function isAppData(x: unknown): x is AppData {
 export async function GET() {
   const id = await userId();
   if (!id) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  return NextResponse.json({ data: await loadData(id) }, { headers: NO_STORE });
+  return NextResponse.json({ data: await loadData(id), scope: id }, { headers: NO_STORE });
 }
 
 /**
@@ -34,6 +34,11 @@ export async function GET() {
 export async function PUT(req: Request) {
   const id = await userId();
   if (!id) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+  // The client says which document it is editing; if the user joined or left a shared household
+  // meanwhile, refuse rather than write personal data into the shared document (or vice versa).
+  const scope = req.headers.get('x-data-scope');
+  if (scope && scope !== id) return NextResponse.json({ error: 'scope_changed', scope: id }, { status: 409, headers: NO_STORE });
 
   const raw = await req.text();
   if (raw.length > MAX_BYTES) return NextResponse.json({ error: 'too large' }, { status: 413 });
@@ -45,16 +50,27 @@ export async function PUT(req: Request) {
   }
   if (!isAppData(body)) return NextResponse.json({ error: 'invalid data' }, { status: 400 });
 
+  // Optimistic concurrency: with X-Base-Version the write only succeeds if the stored copy is the one
+  // the client started from; otherwise it gets the current copy back (409) and merges. Without the
+  // header (older clients) the newest timestamp wins, as before.
+  const baseHeader = req.headers.get('x-base-version');
+  const base = baseHeader !== null && /^\d+$/.test(baseHeader) ? Number(baseHeader) : null;
   const { rowCount } = await pool.query(
-    `insert into user_data (user_id, data, updated_at_ms)
-     values ($1, $2, $3)
-     on conflict (user_id) do update
-       set data = excluded.data, updated_at_ms = excluded.updated_at_ms
-       where user_data.updated_at_ms < excluded.updated_at_ms`,
-    [id, body, body.updatedAt],
+    base === null
+      ? `insert into user_data (user_id, data, updated_at_ms)
+         values ($1, $2, $3)
+         on conflict (user_id) do update
+           set data = excluded.data, updated_at_ms = excluded.updated_at_ms
+           where user_data.updated_at_ms < excluded.updated_at_ms`
+      : `insert into user_data (user_id, data, updated_at_ms)
+         values ($1, $2, $3)
+         on conflict (user_id) do update
+           set data = excluded.data, updated_at_ms = excluded.updated_at_ms
+           where user_data.updated_at_ms = $4`,
+    base === null ? [id, body, body.updatedAt] : [id, body, body.updatedAt, base],
   );
   if (rowCount === 0) {
-    return NextResponse.json({ data: await loadData(id) }, { status: 409, headers: NO_STORE });
+    return NextResponse.json({ data: await loadData(id), scope: id }, { status: 409, headers: NO_STORE });
   }
   return NextResponse.json({ ok: true });
 }

@@ -8,6 +8,8 @@ import { authClient } from '../lib/auth-client';
 import { date } from '../lib/format';
 import { Card, Field } from '../components/ui';
 import { initials } from '../components/Layout';
+import { Sharing } from './Sharing';
+import { NotificationsCard } from './NotificationsCard';
 
 export function Account() {
   const { data, user, syncStatus, replaceAll } = useStore();
@@ -66,6 +68,8 @@ export function Account() {
     ['Subscrições', data.subscriptions.length],
     ['Investimentos', data.investments.length],
     ['Movimentos', (data.transactions ?? []).length],
+    ['Metas', (data.goals ?? []).length],
+    ['Bens', (data.assets ?? []).length],
   ] as const;
 
   return (
@@ -115,6 +119,21 @@ export function Account() {
           </ul>
         </Card>
       </div>
+
+      <Sharing />
+      <NotificationsCard />
+
+      <Card title="Exportar">
+        <div className="preset-row">
+          <a className="button primary" href="/api/export" download>
+            Excel (.xlsx)
+          </a>
+          <a className="button ghost-link" href={`/relatorio?mes=${new Date().toISOString().slice(0, 7)}`}>
+            Relatório do mês (PDF)
+          </a>
+        </div>
+        <p className="muted small">O Excel tem uma folha por área (movimentos, despesas, créditos, investimentos…). O relatório abre pronto para imprimir ou guardar em PDF.</p>
+      </Card>
 
       <Card title="Cópia de segurança">
         <div className="preset-row">

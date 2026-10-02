@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useStore, type SyncStatus } from '../data/store';
 import { authClient } from '../lib/auth-client';
 import { ALL_ITEMS, MOBILE_PRIMARY, NAV_SECTIONS } from './nav';
+import { useReminders } from '../lib/notifications';
 
 const SYNC_LABEL: Record<SyncStatus, string> = {
   syncing: 'A sincronizar…',
@@ -19,7 +20,8 @@ export function initials(name: string, email: string): string {
 }
 
 export function Layout({ children }: { children: ReactNode }) {
-  const { syncStatus, user } = useStore();
+  const { syncStatus, user, data } = useStore();
+  useReminders(data, user.id, syncStatus !== 'syncing' || data.updatedAt > 0);
   const pathname = usePathname();
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);

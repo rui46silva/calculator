@@ -1,6 +1,7 @@
 import { pool } from './db';
 import { getAuth } from './auth';
 import type { AppData } from '@/data/types';
+import { householdIdOf, householdKey } from './household';
 
 export interface SessionUser {
   id: string;
@@ -16,9 +17,10 @@ export async function sessionUser(): Promise<SessionUser | null> {
   return u ? { id: u.id, email: u.email, name: u.name } : null;
 }
 
-/** Key of the data document a user reads and writes (their own; a shared household's in the future). */
+/** Key of the data document a user reads and writes: the shared household's if they belong to one, else their own. */
 export async function dataKeyFor(userId: string): Promise<string> {
-  return userId;
+  const household = await householdIdOf(userId);
+  return household ? householdKey(household) : userId;
 }
 
 export async function loadData(key: string): Promise<AppData | null> {

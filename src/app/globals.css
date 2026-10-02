@@ -564,3 +564,18 @@ a.button.primary { background: var(--accent); color: #fff; }
   .page-break { break-before: page; }
   tr { break-inside: avoid; }
 }
+
+.quick-add:has(.field:nth-of-type(5)) { grid-template-columns: 110px 1.3fr 1fr 140px 130px auto; }
+.settle li { grid-template-columns: 1fr auto; }
+@media (max-width: 760px) { .quick-add:has(.field:nth-of-type(5)) { grid-template-columns: 1fr 1fr; } }
+
+/* Sharing */
+a.button.ghost-link { background: transparent; color: var(--accent); }
+.sharing-options form { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); }
+.sharing-options .field { width: 100%; }
+.members li { grid-template-columns: 1fr auto auto; }
+.invite { margin: 16px 0; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.invite p { margin: 0; }
+.invite-code { font-size: 1.8rem; font-weight: 700; letter-spacing: 0.25em; font-variant-numeric: tabular-nums; padding: 8px 16px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); user-select: all; }
+.leave { margin-top: 8px; }
+.leave .check { margin: 8px 0 4px; }

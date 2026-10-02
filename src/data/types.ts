@@ -123,6 +123,19 @@ export interface Transaction {
   source: 'manual' | 'import';
   /** Identifier of the import batch, so a statement can be undone or de-duplicated. */
   importId?: string;
+  /** In a shared account: who paid (user id). Shared expenses are split equally. */
+  paidBy?: string;
+  /** In a shared account: false for a personal expense that isn't split. */
+  shared?: boolean;
+}
+
+/** Money one member gave another to even out shared expenses. */
+export interface Settlement {
+  id: string;
+  date: string;
+  from: string;
+  to: string;
+  amount: number;
 }
 
 export interface Goal {
@@ -202,6 +215,7 @@ export interface AppData {
   /** Target share (0–1) of the portfolio per asset class, for rebalancing. */
   targetAllocation?: Record<string, number>;
   imports?: ImportRecord[];
+  settlements?: Settlement[];
 }
 
 export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments' | 'transactions' | 'goals' | 'assets';

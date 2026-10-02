@@ -55,10 +55,14 @@ peers opcionais fazem o npm falhar ao lado do vitest 5.
 
 ## Como funciona a sincronização
 
-Cada utilizador tem um documento JSON na tabela `user_data`. As alterações são gravadas localmente e enviadas
-para `PUT /api/data` passado menos de um segundo. Os outros dispositivos vão buscar a versão mais recente quando a
-janela ganha foco e a cada 30 segundos. Em caso de conflito ganha a versão mais recente: o servidor recusa
-escritas mais antigas (409) e devolve a sua cópia.
+Cada conta (ou conta partilhada) tem um documento JSON na tabela `user_data`. As alterações ficam primeiro no
+dispositivo e são enviadas para `PUT /api/data` passado menos de um segundo; os outros dispositivos vão buscar a
+versão mais recente quando a janela ganha foco e a cada 30 segundos.
+
+Edições em simultâneo (dois dispositivos, ou duas pessoas numa conta partilhada) não se perdem: cada gravação diz
+de que versão partiu (`X-Base-Version`) e o servidor só a aceita se for a versão guardada. Se não for, devolve a
+cópia atual e a app faz uma **fusão a três** (versão de partida, local e servidor) item a item — o que cada lado
+acrescentou, alterou ou apagou é aplicado — e volta a gravar. O mesmo acontece com edições feitas offline.
 
 ## Contas e dados de cada utilizador
 
@@ -104,18 +108,65 @@ escritas mais antigas (409) e devolve a sua cópia.
   (ex.: SXR8/VUAA), com números do histórico real do SPY desde 1993 (períodos de 10/20 anos com perda, pior queda)
   e projeção a 10/20/30 anos do valor mensal recomendado. O plano pode ser registado na carteira com um clique.
 
+## Controlo do dia a dia
+
+- **Movimentos** com limites mensais por categoria (aviso aos 80% e aos 100%, projeção para o fim do mês a partir
+  do dia 7) e **deteção de despesas recorrentes** (3+ meses com valor estável → passar a subscrição ou despesa fixa).
+- **Calendário de pagamentos**: prestações, subscrições e despesas fixas com data; o Resumo mostra os próximos 14
+  dias e alertas para pagamentos nos próximos 3 dias.
+
+## Metas e património
+
+- **Metas** com valor, data e quanto já está poupado; a app calcula o valor mensal necessário e compara com a
+  poupança disponível no Plano 50/30/20.
+- **Património**: casa, carro, contas e outros bens contam para o património líquido (bens + investimentos − dívidas).
+- **Histórico mensal** guardado automaticamente (o mês atual vai sendo atualizado; os anteriores ficam fixos) com
+  gráfico da evolução.
+
+## Investimentos (avançado)
+
+- **Registo de compras** (data, unidades, preço, comissão): unidades e investido calculados, rentabilidade anual
+  real (TIR/XIRR) e imposto estimado (28%) se vendesses hoje.
+- **Rebalanceamento**: alocação-alvo por tipo de ativo e quanto investir em cada um este mês, sem vender nada.
+- **Alertas de queda** quando o S&P 500 está 10% (correção) ou 20% (mercado em baixa) abaixo do máximo.
+
+## IA
+
+| Variável | Para quê |
+| --- | --- |
+| `OPENAI_API_KEY` | Ativa a leitura de extratos em PDF/Excel com IA, o assistente e o comentário mensal |
+| `OPENAI_MODEL` | Opcional (por omissão `gpt-4.1-mini`) |
+| `OPENAI_BASE_URL` | Opcional: outro endpoint compatível com a API da OpenAI |
+
+- **Importar extrato** (`/movimentos/importar`): PDF, CSV ou Excel. Com a chave, a OpenAI extrai os movimentos
+  (formato estruturado, validado no servidor); sem a chave, CSV e Excel são lidos localmente (formatos portugueses).
+  Ecrã de revisão com duplicados e transferências desmarcados; cada importação pode ser anulada.
+- **Assistente**: perguntas sobre as tuas finanças; o servidor lê os dados da base de dados (nunca do browser).
+- **Resumo do mês** calculado pela app (sem IA), com comentário opcional da IA e versão para imprimir/PDF.
+- A chave só é usada no servidor. Os extratos são enviados à OpenAI apenas para leitura e não são guardados pela app.
+
+## Partilha, exportação e notificações
+
+- **Conta partilhada**: cria-se em Conta, convida-se com um código (uso único, 7 dias) e os membros passam a ver e
+  editar os mesmos dados. Em Movimentos indica-se quem pagou; "Contas da casa" mostra quem deve a quem (divisão
+  igual) e permite registar acertos. Ao sair, cada um volta aos seus dados pessoais (ou leva uma cópia).
+- **Exportar**: Excel com uma folha por área (`/api/export`) e relatório mensal pronto a guardar em PDF.
+- **Notificações** no dispositivo (pagamentos de hoje/amanhã, orçamentos, metas), mostradas quando a app está aberta
+  ou em segundo plano no browser. Avisos com a app completamente fechada (Web Push) ficam para uma fase seguinte.
+
 ## Estrutura
 
 ```
 src/
-  app/              rotas (App Router): /login, (app)/* protegidas; API: /api/auth (Neon Auth), /api/data, /api/market
+  app/              rotas (App Router): /login, (app)/* protegidas
+                    API: /api/auth, /api/data, /api/market, /api/import, /api/assistant, /api/household, /api/export, /api/health
   views/            ecrãs: Resumo, Orçamento, Movimentos, Créditos, Subscrições, Plano 50/30/20, Cenários, Investimentos, Conta
   lib/finance/      fórmulas puras (prestação, amortização, juros compostos, estatísticas e simulação de ETFs) + testes
   lib/market/       leitura das respostas do Yahoo Finance e Stooq
   lib/summary.ts    resumo mensal e projeção de cenários por ano
   lib/server/       ligação ao Neon e configuração do Neon Auth
   data/             tipos, store (localStorage + sincronização)
-scripts/migrate.mjs cria a tabela user_data
+scripts/migrate.mjs cria as tabelas user_data e as da conta partilhada
 ```
 
 ## Módulos e features propostas
@@ -182,7 +233,20 @@ scripts/migrate.mjs cria a tabela user_data
 - [x] Investimentos: carteira com cotações reais, análise e simulação de ETFs, alocação, mais-valias e imposto, independência financeira
 - [x] Movimentos: despesas pontuais com categoria sugerida, vista mensal e filtros
 - [x] Plano 50/30/20 com valor ideal a investir, fundo de emergência e estratégia mensal no S&P 500
+- [x] Orçamentos por categoria com alertas, calendário de pagamentos, deteção de recorrentes
+- [x] Metas de poupança, património completo (bens) e histórico mensal
+- [x] Registo de compras com TIR, rebalanceamento e alertas de queda do mercado
+- [x] Importação de extratos com IA (e CSV/Excel sem IA), assistente e resumo mensal
+- [x] Conta partilhada com divisão de despesas, exportação Excel/PDF e notificações
+- [x] Fusão de edições simultâneas (dispositivos e pessoas) sem perda de dados
 - [x] Página de login, perfil do utilizador, dados isolados por conta e sincronizados entre dispositivos, exportação/importação JSON
+
+## Guardado para mais tarde
+
+- **Impostos e créditos**: simulador de IRS (deduções, PPR), comparador de propostas de crédito (spread, fixa vs.
+  variável, MTIC) e estratégia de pagamento de dívidas (avalanche vs. bola de neve).
+- Notificações Web Push com a app fechada (VAPID + tarefa agendada).
+- Movimentos numa tabela própria quando o histórico importado crescer muito (hoje o documento vai até 4 MB).
 
 ## Roadmap sugerido
 1. **MVP:** despesas/rendimentos, créditos (simulador + amortização), subscrições, dashboard

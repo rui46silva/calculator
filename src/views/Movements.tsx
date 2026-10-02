@@ -11,6 +11,7 @@ import { monthKey, monthTotals, shiftMonth, suggestCategory } from '../lib/finan
 import { money, percent } from '../lib/format';
 import { BudgetsCard } from './BudgetsCard';
 import { RecurringCard } from './RecurringCard';
+import { SplitCard, memberName } from './SplitCard';
 
 const today = () => {
   const d = new Date();
@@ -31,7 +32,8 @@ const dayLabel = (iso: string) => {
 const TYPE_LABELS = { expense: 'Despesa', income: 'Entrada' } as const;
 
 export function Movements() {
-  const { data, upsert } = useStore();
+  const { data, upsert, household, user } = useStore();
+  const shared = !!household && household.members.length > 1;
   const transactions = data.transactions ?? [];
   const [month, setMonth] = useState(() => monthKey(new Date()));
   const [filter, setFilter] = useState<string | null>(null);
@@ -71,7 +73,7 @@ export function Movements() {
         Resumo, nos Cenários e no Plano 50/30/20.
       </p>
 
-      <QuickAdd onAdd={(t) => {
+      <QuickAdd payers={shared ? household!.members : null} me={user.id} onAdd={(t) => {
         upsert('transactions', t);
         setMonth(monthKey(t.date));
       }} />
@@ -103,6 +105,7 @@ export function Movements() {
         <Stat label="Maior despesa" value={current.largest ? money(current.largest.amount) : '—'} hint={current.largest?.description} />
       </div>
 
+      <SplitCard />
       <BudgetsCard month={month} isCurrentMonth={isCurrentMonth} />
       <RecurringCard />
 
@@ -159,7 +162,14 @@ export function Movements() {
                           {t.description || t.category}
                           {t.source === 'import' && <span className="tag">importado</span>}
                         </span>
-                        <span className="muted">{t.category}</span>
+                        <span className="muted">
+                          {t.category}
+                          {shared &&
+                            (() => {
+                              const payer = t.paidBy ?? household!.members.find((m) => m.role === 'owner')?.userId;
+                              return ` · ${t.shared === false ? 'pessoal' : payer === user.id ? 'pago por ti' : memberName(household, payer)}`;
+                            })()}
+                        </span>
                         <strong className={t.type === 'income' ? 'good' : undefined}>
                           {t.type === 'income' ? '+' : '−'}
                           {money(t.amount)}
@@ -212,6 +222,21 @@ export function Movements() {
             <Field label="Data">
               <input type="date" required value={editor.draft.date} onChange={(e) => editor.set('date', e.target.value)} />
             </Field>
+            {shared && (
+              <>
+                <Field label="Pago por">
+                  <Select
+                    value={editor.draft.paidBy ?? user.id}
+                    options={Object.fromEntries(household!.members.map((m) => [m.userId, m.name || m.email]))}
+                    onChange={(v) => editor.set('paidBy', v)}
+                  />
+                </Field>
+                <label className="check">
+                  <input type="checkbox" checked={editor.draft.shared !== false} onChange={(e) => editor.set('shared', e.target.checked ? undefined : false)} />
+                  Despesa partilhada (dividir em partes iguais)
+                </label>
+              </>
+            )}
             <Field label="Nota (opcional)">
               <input value={editor.draft.note ?? ''} onChange={(e) => editor.set('note', e.target.value || undefined)} />
             </Field>
@@ -223,7 +248,17 @@ export function Movements() {
 }
 
 /** One-line entry: type the amount and a description, the category is guessed, Enter saves. */
-function QuickAdd({ onAdd }: { onAdd: (t: Transaction) => void }) {
+function QuickAdd({
+  onAdd,
+  payers,
+  me,
+}: {
+  onAdd: (t: Transaction) => void;
+  /** Members of a shared account, to say who paid; null when not sharing. */
+  payers: { userId: string; name: string; email: string }[] | null;
+  me: string;
+}) {
+  const [paidBy, setPaidBy] = useState(me);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<string>('Restauração');
@@ -244,7 +279,16 @@ function QuickAdd({ onAdd }: { onAdd: (t: Transaction) => void }) {
     e.preventDefault();
     const value = Math.abs(Number(amount.replace(',', '.')));
     if (!value) return;
-    onAdd({ id: newId(), date, description: description.trim(), amount: value, type: 'expense', category, source: 'manual' });
+    onAdd({
+      id: newId(),
+      date,
+      description: description.trim(),
+      amount: value,
+      type: 'expense',
+      category,
+      source: 'manual',
+      ...(payers ? { paidBy } : {}),
+    });
     setFlash(`${money(value)} em ${category} adicionado.`);
     setAmount('');
     setDescription('');
@@ -284,6 +328,11 @@ function QuickAdd({ onAdd }: { onAdd: (t: Transaction) => void }) {
       <Field label="Data">
         <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
       </Field>
+      {payers && (
+        <Field label="Pago por">
+          <Select value={paidBy} options={Object.fromEntries(payers.map((m) => [m.userId, m.userId === me ? 'Eu' : m.name || m.email]))} onChange={setPaidBy} />
+        </Field>
+      )}
       <button type="submit" className="primary">
         Adicionar
       </button>

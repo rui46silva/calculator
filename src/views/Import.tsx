@@ -12,7 +12,7 @@ import { date, money } from '../lib/format';
 const KIND_LABEL = { 'one-off': 'Pontual', fixed: 'Parece fixa', subscription: 'Parece subscrição', transfer: 'Transferência' } as const;
 
 export function ImportView() {
-  const { data, update } = useStore();
+  const { data, update, loaded } = useStore();
   const [rows, setRows] = useState<ReviewRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +24,7 @@ export function ImportView() {
   const imports = [...(data.imports ?? [])].sort((a, b) => b.at.localeCompare(a.at));
 
   const read = async (files: File[]) => {
-    if (!files.length) return;
+    if (!files.length || !loaded) return;
     setError(null);
     setDone(null);
     setWarnings([]);
@@ -114,11 +114,11 @@ export function ImportView() {
               setDragging(true);
             }}
             onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
+            onDrop={(e) => (loaded ? onDrop(e) : e.preventDefault())}
           >
-            {busy ? (
+            {busy || !loaded ? (
               <p className="dropzone-busy" role="status">
-                <span className="spinner" aria-hidden /> {busy}
+                <span className="spinner" aria-hidden /> {busy ?? 'A carregar os teus dados…'}
               </p>
             ) : (
               <>

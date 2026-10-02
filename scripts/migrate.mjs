@@ -28,4 +28,31 @@ await pool.query(`
 // Earlier versions referenced Better Auth's own "user" table; accounts now live in neon_auth.
 await pool.query('alter table user_data drop constraint if exists user_data_user_id_fkey');
 console.log('user_data table ready');
+
+// Shared households: members read and write one common data document (user_data key "household:<id>").
+await pool.query(`
+  create table if not exists households (
+    id         text primary key,
+    name       text not null,
+    created_by text not null,
+    created_at timestamptz not null default now()
+  );
+  create table if not exists household_members (
+    user_id      text primary key,
+    household_id text not null references households (id) on delete cascade,
+    name         text not null default '',
+    email        text not null default '',
+    role         text not null default 'member',
+    joined_at    timestamptz not null default now()
+  );
+  create index if not exists household_members_household on household_members (household_id);
+  create table if not exists household_invites (
+    code         text primary key,
+    household_id text not null references households (id) on delete cascade,
+    created_by   text not null,
+    expires_at   timestamptz not null,
+    used_by      text
+  );
+`);
+console.log('household tables ready');
 await pool.end();
