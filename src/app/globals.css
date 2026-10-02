@@ -493,3 +493,8 @@ button.link:disabled { color: var(--muted); text-decoration: none; }
 .icon-picker { display: flex; flex-wrap: wrap; gap: 6px; }
 .icon-picker button { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 1.2rem; padding: 4px 8px; }
 .icon-picker button.on { border-color: var(--accent); background: var(--accent-soft); }
+
+/* Lots */
+.lots h3 { margin: 8px 0; }
+.lot-form { display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 8px; align-items: end; margin-top: 8px; }
+@media (max-width: 760px) { .lot-form { grid-template-columns: 1fr 1fr; } .lot-form button { grid-column: 1 / -1; } }

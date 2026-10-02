@@ -12,6 +12,10 @@ import { monthlySummary } from '../lib/summary';
 import { fetchSeries } from '../lib/useMarket';
 import { SYMBOL_PATTERN } from '../lib/market/types';
 import { EtfAnalysis } from './EtfAnalysis';
+import { LotsEditor } from './LotsEditor';
+import { MarketDropAlert } from './MarketDropAlert';
+import { Rebalance } from './Rebalance';
+import { lotsXirr, summarizeLots } from '../lib/finance/portfolio';
 
 interface Quote {
   price: number;
@@ -79,6 +83,7 @@ export function Investments() {
   return (
     <>
       <h1>Investimentos</h1>
+      {data.investments.length > 0 && <MarketDropAlert />}
       <div className="stats">
         <Stat label="Valor atual" value={money(value)} />
         <Stat label="Total investido" value={money(invested)} />
@@ -107,6 +112,10 @@ export function Investments() {
                       {i.assetClass}
                       {q && !('error' in q) && i.units ? ` · ${i.units} × ${q.price.toFixed(2)} ${q.currency}` : ''}
                       {q && 'error' in q ? ' · cotação indisponível' : ''}
+                      {(() => {
+                        const r = i.lots?.length ? lotsXirr(i.lots, i.currentValue) : null;
+                        return r === null ? '' : ` · ${percent(r)}/ano`;
+                      })()}
                     </span>
                     <strong className={i.currentValue >= i.invested ? 'good' : 'bad'}>{money(i.currentValue)}</strong>
                   </li>
@@ -137,6 +146,7 @@ export function Investments() {
         </Card>
       </div>
 
+      <Rebalance contribution={contributions} />
       <EtfAnalysis initialValue={value} monthly={contributions} onAddToPortfolio={addFromEtf} />
       <IndependenceCalculator />
 
@@ -163,18 +173,41 @@ export function Investments() {
                 pattern={SYMBOL_PATTERN.source}
               />
             </Field>
-            <Field label="Unidades">
-              <NumberInput value={editor.draft.units ?? 0} onChange={(n) => editor.set('units', n || undefined)} min={0} />
-            </Field>
-            <Field label="Total investido (€)">
-              <NumberInput value={editor.draft.invested} onChange={(n) => editor.set('invested', n)} min={0} />
-            </Field>
+            {editor.draft.lots?.length ? (
+              <p className="muted small full">Unidades e total investido calculados a partir das compras registadas abaixo.</p>
+            ) : (
+              <>
+                <Field label="Unidades">
+                  <NumberInput value={editor.draft.units ?? 0} onChange={(n) => editor.set('units', n || undefined)} min={0} />
+                </Field>
+                <Field label="Total investido (€)">
+                  <NumberInput value={editor.draft.invested} onChange={(n) => editor.set('invested', n)} min={0} />
+                </Field>
+              </>
+            )}
             <Field label={editor.draft.ticker && editor.draft.units ? 'Valor atual (€) · automático' : 'Valor atual (€)'}>
               <NumberInput value={editor.draft.currentValue} onChange={(n) => editor.set('currentValue', n)} min={0} />
             </Field>
             <Field label="Contribuição mensal (€)">
               <NumberInput value={editor.draft.monthlyContribution} onChange={(n) => editor.set('monthlyContribution', n)} min={0} />
             </Field>
+            <LotsEditor
+              lots={editor.draft.lots ?? []}
+              onChange={(lots) => {
+                const sum = summarizeLots(lots);
+                editor.set('lots', lots.length ? lots : undefined);
+                if (lots.length) {
+                  editor.set('units', Math.round(sum.units * 1e6) / 1e6);
+                  editor.set('invested', Math.round(sum.invested * 100) / 100);
+                }
+              }}
+            />
+            {editor.draft.lots?.length && editor.draft.currentValue > editor.draft.invested ? (
+              <p className="muted small full">
+                Se vendesses hoje: mais-valia de {money(editor.draft.currentValue - editor.draft.invested)}, imposto estimado de{' '}
+                {money((editor.draft.currentValue - editor.draft.invested) * PT_CAPITAL_GAINS_TAX)} (28%).
+              </p>
+            ) : null}
             {draftQuote && !('error' in draftQuote) && draftQuote.currency && draftQuote.currency !== 'EUR' && (
               <p className="muted small full">
                 Atenção: {editor.draft.ticker} cota em {draftQuote.currency}; o valor não é convertido para euros.

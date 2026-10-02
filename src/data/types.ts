@@ -58,6 +58,17 @@ export interface Subscription {
 
 export const ASSET_CLASSES = ['ETF', 'Ações', 'Fundos', 'PPR', 'Certificados', 'Depósitos', 'Cripto', 'Outro'] as const;
 
+/** One purchase of an investment. */
+export interface Lot {
+  id: string;
+  /** YYYY-MM-DD */
+  date: string;
+  units: number;
+  /** Price per unit at purchase. */
+  price: number;
+  fees: number;
+}
+
 export interface Investment {
   id: string;
   name: string;
@@ -68,6 +79,8 @@ export interface Investment {
   /** Optional market ticker (e.g. SXR8.DE); with `units`, the value follows the live price. */
   ticker?: string;
   units?: number;
+  /** Purchases; when present they define `units` and `invested`. */
+  lots?: Lot[];
 }
 
 /** Return assumptions derived from an ETF's history, used by the scenario presets. */
@@ -176,6 +189,8 @@ export interface AppData {
   categoryBudgets?: Record<string, number>;
   /** Recurring-movement suggestions the user chose to ignore (normalised descriptions). */
   dismissedRecurring?: string[];
+  /** Target share (0–1) of the portfolio per asset class, for rebalancing. */
+  targetAllocation?: Record<string, number>;
 }
 
 export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments' | 'transactions' | 'goals' | 'assets';

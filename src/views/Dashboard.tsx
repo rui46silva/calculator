@@ -9,6 +9,7 @@ import { monthlySummary } from '../lib/summary';
 import { monthKey, monthTotals } from '../lib/finance/transactions';
 import { upcomingPayments } from '../lib/finance/calendar';
 import { budgetStatus } from '../lib/finance/budgets';
+import { MarketDropAlert } from './MarketDropAlert';
 
 const EFFORT_LIMIT = 0.35;
 const UPCOMING_DAYS = 14;
@@ -31,6 +32,7 @@ export function Dashboard() {
   return (
     <>
       <h1>Resumo</h1>
+      {data.investments.length > 0 && <MarketDropAlert />}
       {isEmpty && (
         <Card>
           <p>
