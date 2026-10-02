@@ -27,6 +27,7 @@ interface Body {
 export async function POST(req: Request) {
   const user = await sessionUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  if (!aiConfigured()) return NextResponse.json({ error: 'A IA não está disponível de momento.' }, { status: 503 });
   const body = (await req.json().catch(() => ({}))) as Body;
   const data = { ...emptyData(), ...((await loadData(await dataKeyFor(user.id))) ?? {}) };
   const context = buildContext(data);

@@ -8,6 +8,7 @@ import { RichText } from '../components/RichText';
 import { monthReport } from '../lib/report';
 import { monthKey, shiftMonth } from '../lib/finance/transactions';
 import { money, percent } from '../lib/format';
+import { AI_ENABLED } from '../lib/features';
 
 const SUGGESTIONS = [
   'Quanto gastei em restaurantes este ano?',
@@ -49,6 +50,7 @@ export function Assistant() {
   const isCurrent = month === monthKey(new Date());
 
   useEffect(() => {
+    if (!AI_ENABLED) return setConfigured(false);
     fetch('/api/assistant')
       .then((r) => r.json())
       .then((j: { configured?: boolean }) => setConfigured(!!j.configured))
@@ -172,7 +174,12 @@ export function Assistant() {
       </Card>
 
       <Card title="Pergunta sobre as tuas finanças">
-        {configured === false ? (
+        {!AI_ENABLED ? (
+          <p className="muted locked-note">
+            <span aria-hidden>🔒</span>
+            <span>O assistente com IA está bloqueado por agora e vai chegar em breve. O resumo do mês acima funciona sem IA.</span>
+          </p>
+        ) : configured === false ? (
           <p className="muted">
             O assistente precisa de uma chave da OpenAI. No Vercel, adiciona <code>OPENAI_API_KEY</code> em Settings → Environment
             Variables e faz Redeploy. O resumo do mês acima funciona sem IA.

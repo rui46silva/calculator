@@ -2,12 +2,14 @@
  * Minimal OpenAI Chat Completions client (fetch only, no SDK). The key never leaves the server.
  * OPENAI_BASE_URL allows any OpenAI-compatible endpoint (and a local mock in tests).
  */
+import { AI_ENABLED } from '../features';
+
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 const DEFAULT_MODEL = 'gpt-4.1-mini';
 const TIMEOUT_MS = 55_000;
 
 export function aiConfigured(): boolean {
-  return !!process.env.OPENAI_API_KEY?.trim();
+  return AI_ENABLED && !!process.env.OPENAI_API_KEY?.trim();
 }
 
 export class AiError extends Error {
@@ -29,6 +31,7 @@ export interface ChatMessage {
 }
 
 async function complete(messages: ChatMessage[], extra: Record<string, unknown> = {}): Promise<string> {
+  if (!AI_ENABLED) throw new AiError('As funcionalidades de IA estão bloqueadas por agora.', 503);
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) throw new AiError('A IA não está configurada: define OPENAI_API_KEY no Vercel.', 503);
   const base = (process.env.OPENAI_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, '');

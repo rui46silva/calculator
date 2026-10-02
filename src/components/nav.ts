@@ -1,9 +1,13 @@
+import { AI_ENABLED } from '../lib/features';
+
 export interface NavItem {
   to: string;
   label: string;
   /** Shorter label for the mobile bottom bar. */
   short?: string;
   icon: string;
+  /** Small tag next to the label, e.g. for features that are not available yet. */
+  badge?: string;
 }
 
 export interface NavSection {
@@ -18,6 +22,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/', label: 'Resumo', icon: '◎' },
       { to: '/movimentos', label: 'Movimentos', short: 'Mov.', icon: '±' },
       { to: '/calendario', label: 'Calendário', icon: '▦' },
+      { to: '/movimentos/importar', label: 'Importar extrato', icon: '⇪' },
     ],
   },
   {
@@ -41,8 +46,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'IA',
     items: [
-      { to: '/assistente', label: 'Assistente', icon: '✦' },
-      { to: '/movimentos/importar', label: 'Importar extrato', icon: '⇪' },
+      { to: '/assistente', label: 'Assistente', icon: '✦', badge: AI_ENABLED ? undefined : 'Em breve' },
     ],
   },
   {

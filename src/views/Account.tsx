@@ -15,7 +15,7 @@ export function Account() {
   const { data, user, syncStatus, replaceAll } = useStore();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState(user.name);
+  const [name, setName] = useState(user.name ?? '');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -91,7 +91,7 @@ export function Account() {
             <Field label="Nome">
               <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
             </Field>
-            <button type="submit" className="primary" disabled={saving || name.trim() === user.name}>
+            <button type="submit" className="primary" disabled={saving || name.trim() === (user.name ?? '')}>
               Guardar
             </button>
             {message && <p className={`full ${message.ok ? 'good' : 'bad'}`}>{message.text}</p>}

@@ -8,6 +8,7 @@ import { Card, Empty, Select } from '../components/ui';
 import { prepareReview, type ReviewRow } from '../lib/import/review';
 import type { ImportResult, ImportRow } from '../lib/import/types';
 import { date, money } from '../lib/format';
+import { AI_ENABLED } from '../lib/features';
 
 const KIND_LABEL = { 'one-off': 'Pontual', fixed: 'Parece fixa', subscription: 'Parece subscrição', transfer: 'Transferência' } as const;
 
@@ -19,9 +20,9 @@ export function ImportView() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [done, setDone] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [source, setSource] = useState<ImportResult['source']>('ai');
+  const [source, setSource] = useState<ImportResult['source']>(AI_ENABLED ? 'ai' : 'csv');
   const fileRef = useRef<HTMLInputElement>(null);
-  const imports = [...(data.imports ?? [])].sort((a, b) => b.at.localeCompare(a.at));
+  const imports = (Array.isArray(data.imports) ? data.imports : []).filter(Boolean).sort((a, b) => String(b.at ?? '').localeCompare(String(a.at ?? '')));
 
   const read = async (files: File[]) => {
     if (!files.length || !loaded) return;
@@ -30,7 +31,7 @@ export function ImportView() {
     setWarnings([]);
     const collected: (ImportRow & { fileName: string })[] = [];
     const notes: string[] = [];
-    let lastSource: ImportResult['source'] = 'ai';
+    let lastSource: ImportResult['source'] = AI_ENABLED ? 'ai' : 'csv';
     for (const file of files) {
       setBusy(`A ler ${file.name}…`);
       const body = new FormData();
@@ -40,8 +41,8 @@ export function ImportView() {
         const json = (await res.json().catch(() => ({}))) as ImportResult & { error?: string };
         if (!res.ok) throw new Error(json.error ?? `Erro ${res.status}`);
         lastSource = json.source;
-        collected.push(...json.rows.map((r) => ({ ...r, fileName: file.name })));
-        notes.push(...json.warnings.map((w) => `${file.name}: ${w}`));
+        collected.push(...(json.rows ?? []).map((r) => ({ ...r, fileName: file.name })));
+        notes.push(...(json.warnings ?? []).map((w) => `${file.name}: ${w}`));
       } catch (err) {
         notes.push(`${file.name}: ${(err as Error).message}`);
         if (files.length === 1) setError((err as Error).message);
@@ -100,10 +101,23 @@ export function ImportView() {
         <Link href="/movimentos">← Movimentos</Link>
       </p>
       <h1>Importar extrato bancário</h1>
-      <p className="muted lead">
-        Carrega o extrato do banco em PDF, CSV ou Excel (.xlsx). A IA identifica cada movimento e sugere a categoria; tu revês antes de
-        gravar. O ficheiro não é guardado.
-      </p>
+      {AI_ENABLED ? (
+        <p className="muted lead">
+          Carrega o extrato do banco em PDF, CSV ou Excel (.xlsx). A IA identifica cada movimento e sugere a categoria; tu revês antes de
+          gravar. O ficheiro não é guardado.
+        </p>
+      ) : (
+        <>
+          <p className="muted lead">
+            Carrega o extrato do banco em CSV ou Excel (.xlsx). A app lê cada movimento e sugere a categoria a partir da descrição; tu revês
+            antes de gravar. O ficheiro não é guardado.
+          </p>
+          <p className="muted small locked-note">
+            <span aria-hidden>🔒</span>
+            <span>A leitura com IA (incluindo PDF) está bloqueada por agora e vai chegar em breve.</span>
+          </p>
+        </>
+      )}
 
       {!rows && (
         <Card>
@@ -125,7 +139,7 @@ export function ImportView() {
                 <p>
                   <strong>Arrasta para aqui os ficheiros do extrato</strong>
                 </p>
-                <p className="muted small">PDF, CSV ou Excel (.xlsx), até 4 MB cada. Podes juntar vários meses de uma vez.</p>
+                <p className="muted small">{AI_ENABLED ? 'PDF, CSV ou Excel (.xlsx)' : 'CSV ou Excel (.xlsx)'}, até 4 MB cada. Podes juntar vários meses de uma vez.</p>
                 <button className="primary" onClick={() => fileRef.current?.click()}>
                   Escolher ficheiros
                 </button>
@@ -136,7 +150,7 @@ export function ImportView() {
               type="file"
               multiple
               hidden
-              accept=".pdf,.csv,.txt,.xlsx,application/pdf,text/csv"
+              accept={AI_ENABLED ? '.pdf,.csv,.txt,.xlsx,application/pdf,text/csv' : '.csv,.txt,.xlsx,text/csv'}
               onChange={(e) => {
                 void read([...(e.target.files ?? [])]);
                 e.target.value = '';

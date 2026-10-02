@@ -168,7 +168,7 @@ td.spark .bar-fill { height: 8px; }
     border-right: none; border-top: 1px solid var(--border); overflow-x: auto; gap: 0;
   }
   .nav .brand, .nav .sync { display: none; }
-  .nav-label { display: none; }
+  .nav-label, .nav .nav-badge { display: none; }
   .nav-short { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .nav-link { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 2px; padding: 6px 4px; font-size: 0.64rem; text-align: center; }
   .nav-icon { font-size: 1.1rem; }
@@ -579,3 +579,12 @@ a.button.ghost-link { background: transparent; color: var(--accent); }
 .invite-code { font-size: 1.8rem; font-weight: 700; letter-spacing: 0.25em; font-variant-numeric: tabular-nums; padding: 8px 16px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); user-select: all; }
 .leave { margin-top: 8px; }
 .leave .check { margin: 8px 0 4px; }
+
+.nav-badge {
+  margin-left: auto; font-size: 0.65rem; font-weight: 600; white-space: nowrap;
+  padding: 1px 6px; border-radius: 99px; background: var(--border); color: var(--muted);
+}
+.more-item .nav-badge { margin-left: 4px; }
+.locked-note { display: flex; gap: 10px; align-items: flex-start; }
+.locked-note > span:first-child { font-size: 1.2rem; line-height: 1.4; }
+.error-detail { white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }

@@ -19,7 +19,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!user) return <div className="splash">A carregar…</div>;
 
   return (
-    <StoreProvider key={user.id} user={{ id: user.id, email: user.email, name: user.name, createdAt: String(user.createdAt) }}>
+    <StoreProvider key={user.id} user={{ id: user.id, email: user.email ?? '', name: user.name ?? '', createdAt: String(user.createdAt) }}>
       <Layout>{children}</Layout>
     </StoreProvider>
   );

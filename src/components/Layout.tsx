@@ -65,6 +65,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   {n.icon}
                 </span>
                 <span className="nav-label">{n.label}</span>
+                {n.badge && <span className="nav-badge">{n.badge}</span>}
               </Link>
             ))}
           </div>
@@ -113,6 +114,7 @@ export function Layout({ children }: { children: ReactNode }) {
                     <Link key={n.to} href={n.to} className={`more-item ${isActive(n.to) ? 'active' : ''}`}>
                       <span aria-hidden>{n.icon}</span>
                       {n.label}
+                      {n.badge && <span className="nav-badge">{n.badge}</span>}
                     </Link>
                   ))}
                 </div>

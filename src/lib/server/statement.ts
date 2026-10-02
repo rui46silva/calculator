@@ -3,6 +3,7 @@ import { TRANSACTION_CATEGORIES } from '@/data/types';
 import { parseStatementCsv } from '@/lib/import/csv';
 import type { ImportResult, ImportRow } from '@/lib/import/types';
 import { AiError, aiConfigured, chatJson } from './openai';
+import { AI_ENABLED } from '../features';
 
 const MAX_TEXT_CHARS = 150_000;
 const KINDS = ['one-off', 'fixed', 'subscription', 'transfer'] as const;
@@ -94,9 +95,9 @@ export async function readStatement(name: string, kind: FileKind, buffer: ArrayB
   const text = kind === 'pdf' ? null : kind === 'xlsx' ? await xlsxToText(buffer) : new TextDecoder('utf-8').decode(buffer);
 
   if (!aiConfigured()) {
-    if (text === null) throw new AiError('Para ler PDFs é preciso configurar a IA (OPENAI_API_KEY). Exporta o extrato em CSV ou Excel, ou configura a chave.', 503);
+    if (text === null) throw new AiError(AI_ENABLED ? 'Para ler PDFs é preciso configurar a IA (OPENAI_API_KEY). Exporta o extrato em CSV ou Excel, ou configura a chave.' : 'A leitura de PDFs com IA está bloqueada por agora. Exporta o extrato do banco em CSV ou Excel.', 503);
     const rows = parseStatementCsv(text);
-    if (!rows.length) throw new AiError('Não reconhecemos as colunas deste ficheiro. Configura a IA (OPENAI_API_KEY) para ler qualquer formato.', 422);
+    if (!rows.length) throw new AiError(AI_ENABLED ? 'Não reconhecemos as colunas deste ficheiro. Configura a IA (OPENAI_API_KEY) para ler qualquer formato.' : 'Não reconhecemos as colunas deste ficheiro. Confirma que tem data, descrição e valor (ou débito/crédito).', 422);
     return { rows, source: 'csv', warnings: ['Lido sem IA: as categorias são sugestões a partir da descrição.'] };
   }
 
