@@ -1,6 +1,7 @@
 import type { AppData, Loan } from '../data/types';
 import { toMonthly } from './finance/frequency';
 import { amortizationSchedule, monthlyPayment } from './finance/loan';
+import { averageMonthly } from './finance/transactions';
 
 /** Number of instalments already paid on `today`, counting the start month as the first. */
 export function monthsElapsed(startDate: string, today = new Date()): number {
@@ -30,6 +31,8 @@ export interface MonthlySummary {
   income: number;
   expenses: number;
   subscriptions: number;
+  /** Average monthly one-off spending (last 90 days). */
+  oneOff: number;
   debt: number;
   balance: number;
   debtBalance: number;
@@ -43,6 +46,7 @@ export function monthlySummary(data: AppData, today = new Date()): MonthlySummar
   const income = sum(data.incomes.map((i) => toMonthly(i.amount, i.frequency)));
   const expenses = sum(data.expenses.map((e) => toMonthly(e.amount, e.frequency)));
   const subscriptions = sum(data.subscriptions.map((s) => toMonthly(s.amount, s.frequency)));
+  const oneOff = averageMonthly(data.transactions ?? [], today);
   const statuses = data.loans.map((l) => loanStatus(l, today));
   const debt = sum(statuses.filter((s) => s.active).map((s) => s.payment));
   const debtBalance = sum(statuses.map((s) => s.balance));
@@ -52,8 +56,9 @@ export function monthlySummary(data: AppData, today = new Date()): MonthlySummar
     income,
     expenses,
     subscriptions,
+    oneOff,
     debt,
-    balance: income - expenses - subscriptions - debt,
+    balance: income - expenses - subscriptions - oneOff - debt,
     debtBalance,
     invested,
     portfolioValue,
@@ -101,7 +106,7 @@ export function projectScenario(data: AppData, input: ScenarioInput, today = new
 
   for (let y = 1; y <= input.years; y++) {
     const income = base.income * 12 * Math.pow(1 + input.incomeGrowth, y - 1);
-    const expenses = (base.expenses + base.subscriptions) * 12 * Math.pow(1 + input.inflation, y - 1);
+    const expenses = (base.expenses + base.subscriptions + base.oneOff) * 12 * Math.pow(1 + input.inflation, y - 1);
 
     let debtPayments = 0;
     let debtBalance = 0;

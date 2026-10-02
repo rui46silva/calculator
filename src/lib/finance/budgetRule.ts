@@ -1,6 +1,7 @@
 import type { AppData, RuleBucket } from '../../data/types';
 import { toMonthly } from './frequency';
 import { loanStatus } from '../summary';
+import { averageMonthlyByCategory } from './transactions';
 
 export const RULE = { needs: 0.5, wants: 0.3, savings: 0.2 } as const;
 
@@ -15,6 +16,7 @@ const DEFAULT_WANTS = new Set([
   'expense:Lazer',
   'expense:Outros',
   ...['Streaming', 'Música', 'Software', 'Cloud', 'Ginásio', 'Notícias', 'Jogos', 'Outros'].map((c) => `subscription:${c}`),
+  ...['Restauração', 'Compras', 'Lazer', 'Viagens', 'Presentes', 'Outros'].map((c) => `transaction:${c}`),
 ]);
 
 /** Default 50/30/20 bucket for a spending line: essentials are needs, discretionary spending is wants. */
@@ -24,7 +26,7 @@ export function defaultBucket(key: string): RuleBucket {
 }
 
 export interface RuleLine {
-  /** `expense:<category>`, `subscription:<category>` or `loan:<type>` */
+  /** `expense:<category>`, `subscription:<category>`, `transaction:<category>` or `loan:<type>` */
   key: string;
   label: string;
   monthly: number;
@@ -51,6 +53,7 @@ export interface RulePlan {
 
 const SUB_LABEL = 'Subscrições · ';
 const LOAN_LABEL = 'Prestação · ';
+const ONE_OFF_LABEL = 'Pontuais (média 3 meses) · ';
 
 /** Applies the 50/30/20 rule to the user's data and works out a safe monthly investment. */
 export function rulePlan(data: AppData, today = new Date()): RulePlan {
@@ -66,6 +69,9 @@ export function rulePlan(data: AppData, today = new Date()): RulePlan {
   };
   for (const e of data.expenses) add(`expense:${e.category}`, e.category, toMonthly(e.amount, e.frequency));
   for (const s of data.subscriptions) add(`subscription:${s.category}`, SUB_LABEL + s.category, toMonthly(s.amount, s.frequency));
+  for (const [category, monthly] of averageMonthlyByCategory(data.transactions ?? [], today)) {
+    add(`transaction:${category}`, ONE_OFF_LABEL + category, monthly);
+  }
   const statuses = data.loans.map((l) => ({ loan: l, status: loanStatus(l, today) }));
   for (const { loan, status } of statuses) if (status.active) add(`loan:${loan.type}`, LOAN_LABEL + loan.type, status.payment);
 

@@ -6,6 +6,7 @@ import { Card, Stat } from '../components/ui';
 import { effortRate } from '../lib/finance/loan';
 import { money, percent, date } from '../lib/format';
 import { monthlySummary } from '../lib/summary';
+import { monthKey, monthTotals } from '../lib/finance/transactions';
 
 const EFFORT_LIMIT = 0.35;
 const RENEWAL_WINDOW_DAYS = 30;
@@ -14,7 +15,8 @@ export function Dashboard() {
   const { data } = useStore();
   const s = monthlySummary(data);
   const effort = effortRate(s.debt, s.income);
-  const outgoing = s.expenses + s.subscriptions + s.debt;
+  const outgoing = s.expenses + s.subscriptions + s.oneOff + s.debt;
+  const thisMonth = monthTotals(data.transactions ?? [], monthKey(new Date()));
 
   const now = Date.now();
   const renewals = data.subscriptions
@@ -47,6 +49,7 @@ export function Dashboard() {
           hint={effort > EFFORT_LIMIT ? 'Acima de 35%: risco elevado' : 'Prestações / rendimento'}
           tone={effort > EFFORT_LIMIT ? 'bad' : undefined}
         />
+        <Stat label="Gastos pontuais este mês" value={money(thisMonth.spent)} hint={`Média de 3 meses: ${money(s.oneOff)}/mês`} />
         <Stat label="Dívida em aberto" value={money(s.debtBalance)} />
         <Stat label="Investimentos" value={money(s.portfolioValue)} />
         <Stat
@@ -61,7 +64,8 @@ export function Dashboard() {
         <Card title="Para onde vai o dinheiro (mensal)">
           <Breakdown
             items={[
-              ['Despesas', s.expenses],
+              ['Despesas fixas', s.expenses],
+              ['Pontuais', s.oneOff],
               ['Prestações', s.debt],
               ['Subscrições', s.subscriptions],
               ['Sobra', Math.max(s.balance, 0)],

@@ -82,6 +82,16 @@ escritas mais antigas (409) e devolve a sua cópia.
 - **Carteira:** um investimento com ticker e unidades é avaliado automaticamente ao preço de mercado.
 - As cotações vêm de `GET /api/market/<ticker>` (só para utilizadores autenticados), com cache de 1 hora.
 
+## Movimentos (despesas pontuais)
+
+- Registo rápido numa linha (valor, descrição, categoria, data); a categoria é sugerida pela descrição
+  (ex.: "jantar" → Restauração, "Pingo Doce" → Supermercado, "Uber" → Transportes).
+- Vista por mês: total, média diária, comparação com o mês anterior, maior despesa, gasto por categoria
+  (clicável para filtrar), pesquisa e lista agrupada por dia; cada movimento pode ser editado ou apagado.
+- A **média dos últimos 90 dias** entra no Resumo, no saldo mensal, nos Cenários e no Plano 50/30/20
+  (Restauração, Compras, Lazer, Viagens, Presentes e Outros como desejos; o resto como necessidades).
+- Cada movimento guarda `source` (`manual`/`import`) e `importId`, para a futura importação de extratos com IA.
+
 ## Plano 50/30/20
 
 - Usa os rendimentos, despesas, prestações e subscrições registados: **50% necessidades, 30% desejos, 20% poupança**.
@@ -99,7 +109,7 @@ escritas mais antigas (409) e devolve a sua cópia.
 ```
 src/
   app/              rotas (App Router): /login, (app)/* protegidas; API: /api/auth (Neon Auth), /api/data, /api/market
-  views/            ecrãs: Resumo, Orçamento, Créditos, Subscrições, Plano 50/30/20, Cenários, Investimentos, Conta
+  views/            ecrãs: Resumo, Orçamento, Movimentos, Créditos, Subscrições, Plano 50/30/20, Cenários, Investimentos, Conta
   lib/finance/      fórmulas puras (prestação, amortização, juros compostos, estatísticas e simulação de ETFs) + testes
   lib/market/       leitura das respostas do Yahoo Finance e Stooq
   lib/summary.ts    resumo mensal e projeção de cenários por ano
@@ -170,6 +180,7 @@ scripts/migrate.mjs cria a tabela user_data
 - [x] Subscrições: custo mensal/anual, renovações, poupança ao cancelar as pouco usadas
 - [x] Cenários: projeção até 40 anos com inflação, aumentos e presets pessimista/base/otimista
 - [x] Investimentos: carteira com cotações reais, análise e simulação de ETFs, alocação, mais-valias e imposto, independência financeira
+- [x] Movimentos: despesas pontuais com categoria sugerida, vista mensal e filtros
 - [x] Plano 50/30/20 com valor ideal a investir, fundo de emergência e estratégia mensal no S&P 500
 - [x] Página de login, perfil do utilizador, dados isolados por conta e sincronizados entre dispositivos, exportação/importação JSON
 

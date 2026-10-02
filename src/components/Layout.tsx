@@ -6,15 +6,17 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useStore, type SyncStatus } from '../data/store';
 import { authClient } from '../lib/auth-client';
 
-const NAV: { to: string; label: string; short?: string; icon: string }[] = [
+const NAV: { to: string; label: string; short?: string; icon: string; desktopOnly?: boolean }[] = [
   { to: '/', label: 'Resumo', icon: '◎' },
   { to: '/orcamento', label: 'Orçamento', short: 'Orçam.', icon: '≡' },
+  { to: '/movimentos', label: 'Movimentos', short: 'Mov.', icon: '±' },
   { to: '/creditos', label: 'Créditos', icon: '⌂' },
   { to: '/subscricoes', label: 'Subscrições', short: 'Subscr.', icon: '↻' },
   { to: '/plano', label: 'Plano 50/30/20', short: 'Plano', icon: '%' },
   { to: '/cenarios', label: 'Cenários', short: 'Cenár.', icon: '↗' },
   { to: '/investimentos', label: 'Investimentos', short: 'Investir', icon: '▲' },
-  { to: '/conta', label: 'Conta', icon: '●' },
+  // On mobile the account lives in the top bar, to keep the bottom bar readable.
+  { to: '/conta', label: 'Conta', icon: '●', desktopOnly: true },
 ];
 
 const SYNC_LABEL: Record<SyncStatus, string> = {
@@ -43,10 +45,17 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="app">
+      <header className="mobile-top">
+        <span className="brand">Finanças</span>
+        <span className={`sync sync-${syncStatus}`} aria-label={SYNC_LABEL[syncStatus]} title={SYNC_LABEL[syncStatus]} />
+        <Link href="/conta" className="avatar" aria-label="Conta">
+          {initials(user.name, user.email)}
+        </Link>
+      </header>
       <nav className="nav">
         <div className="brand">Finanças</div>
         {NAV.map((n) => (
-          <Link key={n.to} href={n.to} className={`nav-link ${pathname === n.to ? 'active' : ''}`}>
+          <Link key={n.to} href={n.to} className={`nav-link ${pathname === n.to ? 'active' : ''} ${n.desktopOnly ? 'desktop-only' : ''}`}>
             <span className="nav-icon" aria-hidden>
               {n.icon}
             </span>

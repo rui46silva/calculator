@@ -79,6 +79,37 @@ export interface MarketAssumptions {
   appliedAt: number;
 }
 
+export const TRANSACTION_CATEGORIES = [
+  'Restauração',
+  'Supermercado',
+  'Compras',
+  'Lazer',
+  'Transportes',
+  'Saúde',
+  'Casa',
+  'Viagens',
+  'Presentes',
+  'Educação',
+  'Outros',
+] as const;
+
+/** A one-off movement (dinner, shopping…) outside the recurring expenses. */
+export interface Transaction {
+  id: string;
+  /** ISO date (YYYY-MM-DD). */
+  date: string;
+  description: string;
+  /** Always positive; `type` says which way the money went. */
+  amount: number;
+  type: 'expense' | 'income';
+  category: string;
+  note?: string;
+  /** Where it came from: typed in, or imported from a bank statement (future AI import). */
+  source: 'manual' | 'import';
+  /** Identifier of the import batch, so a statement can be undone or de-duplicated. */
+  importId?: string;
+}
+
 export type RuleBucket = 'needs' | 'wants';
 
 /** Settings for the 50/30/20 plan. */
@@ -100,12 +131,13 @@ export interface AppData {
   loans: Loan[];
   subscriptions: Subscription[];
   investments: Investment[];
+  transactions: Transaction[];
   marketAssumptions?: MarketAssumptions;
   budgetRule?: BudgetRuleSettings;
 }
 
-export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments';
+export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments' | 'transactions';
 
 export function emptyData(): AppData {
-  return { version: 1, updatedAt: 0, incomes: [], expenses: [], loans: [], subscriptions: [], investments: [] };
+  return { version: 1, updatedAt: 0, incomes: [], expenses: [], loans: [], subscriptions: [], investments: [], transactions: [] };
 }

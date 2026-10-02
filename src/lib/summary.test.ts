@@ -40,6 +40,19 @@ describe('monthlySummary', () => {
   });
 });
 
+describe('one-off spending', () => {
+  it('lowers the monthly balance by the 90-day average', () => {
+    const data: AppData = {
+      ...emptyData(),
+      incomes: [{ id: 'i', name: 'Salário', amount: 2000, frequency: 'monthly' }],
+      transactions: [{ id: 't', date: '2026-10-01', description: 'Jantar', amount: 90, type: 'expense', category: 'Restauração', source: 'manual' }],
+    };
+    const s = monthlySummary(data, today);
+    expect(s.oneOff).toBeCloseTo(30, 6);
+    expect(s.balance).toBeCloseTo(1970, 6);
+  });
+});
+
 describe('projectScenario', () => {
   it('accumulates surplus as cash when nothing is invested', () => {
     const data: AppData = {

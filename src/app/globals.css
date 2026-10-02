@@ -362,3 +362,43 @@ button.link:disabled { color: var(--muted); text-decoration: none; }
   .strategy-numbers th, .strategy-numbers td { padding: 6px 3px; font-size: 0.78rem; }
 }
 .strategy-numbers th, .strategy-numbers td { padding: 8px 6px; }
+
+/* Movements */
+.quick-add { display: grid; grid-template-columns: 120px 1.4fr 1fr 150px auto; gap: 12px; align-items: end; }
+.quick-add input[aria-label="Valor"] { font-size: 1.1rem; font-weight: 600; }
+.quick-flash { grid-column: 1 / -1; margin: 0; }
+.month-nav { display: flex; align-items: center; gap: 12px; margin: 0 0 16px; }
+.month-nav strong { font-size: 1.15rem; min-width: 150px; text-align: center; }
+.month-nav button.ghost { padding: 4px 12px; font-size: 1.1rem; }
+.movements-grid { grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.4fr); }
+.bar-button { width: 100%; background: transparent; border: none; color: var(--text); padding: 4px 6px; border-radius: 6px; text-align: left; font-size: 0.9rem; }
+.bar-button:hover { background: var(--bg); }
+.bar-button.on { background: var(--accent-soft); }
+.search { max-width: 180px; padding: 6px 10px; font-size: 0.85rem; }
+.day-groups { display: flex; flex-direction: column; gap: 12px; max-height: 560px; overflow-y: auto; }
+.day-head { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); padding: 4px; border-bottom: 1px solid var(--border); }
+.coming-soon { display: flex; gap: 12px; align-items: flex-start; }
+.coming-soon p { margin: 0; }
+@media (max-width: 760px) {
+  .quick-add { grid-template-columns: 1fr 1fr; }
+  .quick-add .field:nth-of-type(2) { grid-column: 1 / -1; order: -1; }
+  .quick-add button[type=submit] { grid-column: 1 / -1; }
+  .movements-grid { grid-template-columns: 1fr; }
+  .search { max-width: 130px; }
+  .coming-soon { flex-direction: column; }
+}
+
+/* Mobile top bar */
+.mobile-top { display: none; }
+@media (max-width: 760px) {
+  .desktop-only { display: none !important; }
+  .mobile-top {
+    display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 9;
+    padding: calc(8px + env(safe-area-inset-top)) 16px 8px; background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .mobile-top .brand { display: block; padding: 0; font-size: 1.05rem; margin-right: auto; }
+  .mobile-top .sync { display: block; width: 8px; height: 8px; border-radius: 50%; padding: 0; margin: 0; background: var(--muted); font-size: 0; }
+  .mobile-top .sync-synced { background: var(--good); }
+  .mobile-top .sync-error { background: var(--bad); }
+  .mobile-top .avatar { text-decoration: none; }
+}

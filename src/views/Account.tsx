@@ -65,6 +65,7 @@ export function Account() {
     ['Créditos', data.loans.length],
     ['Subscrições', data.subscriptions.length],
     ['Investimentos', data.investments.length],
+    ['Movimentos', (data.transactions ?? []).length],
   ] as const;
 
   return (

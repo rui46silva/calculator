@@ -83,6 +83,22 @@ describe('rulePlan', () => {
     expect(p.actual.wants).toBeCloseTo(15, 6);
   });
 
+  it('counts one-off spending (90-day average) in the right bucket', () => {
+    const p = rulePlan(
+      data({
+        budgetRule: { emergencyFund: 1_000_000, emergencyMonths: 6 },
+        transactions: [
+          { id: 't1', date: '2026-09-20', description: 'Jantar', amount: 150, type: 'expense', category: 'Restauração', source: 'manual' },
+          { id: 't2', date: '2026-09-21', description: 'Pingo Doce', amount: 60, type: 'expense', category: 'Supermercado', source: 'manual' },
+        ],
+      }),
+      today,
+    );
+    expect(p.lines.find((l) => l.key === 'transaction:Restauração')).toMatchObject({ monthly: 50, bucket: 'wants' });
+    expect(p.lines.find((l) => l.key === 'transaction:Supermercado')).toMatchObject({ monthly: 20, bucket: 'needs' });
+    expect(p.actual.wants).toBeCloseTo(215 + 50, 6);
+  });
+
   it('handles no income without dividing by zero', () => {
     const p = rulePlan(emptyData(), today);
     expect(p.invest).toBe(0);
