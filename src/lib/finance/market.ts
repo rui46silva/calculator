@@ -146,3 +146,28 @@ export function simulate(input: SimulationInput): SimulationResult {
     lossProbability: losses / paths,
   };
 }
+
+export interface RollingStats {
+  windows: number;
+  /** Share of N-year holding periods that ended below where they started. */
+  lossShare: number;
+  worst: number;
+  median: number;
+  best: number;
+}
+
+/** Annualised returns of every N-year holding period in the series (monthly steps). */
+export function rollingReturns(points: PricePoint[], years: number): RollingStats | null {
+  const span = years * 12;
+  if (points.length <= span) return null;
+  const rates: number[] = [];
+  for (let i = 0; i + span < points.length; i++) rates.push(Math.pow(points[i + span].close / points[i].close, 1 / years) - 1);
+  const sorted = [...rates].sort((a, b) => a - b);
+  return {
+    windows: rates.length,
+    lossShare: rates.filter((r) => r < 0).length / rates.length,
+    worst: sorted[0],
+    median: percentile(sorted, 0.5),
+    best: sorted[sorted.length - 1],
+  };
+}

@@ -82,12 +82,24 @@ escritas mais antigas (409) e devolve a sua cópia.
 - **Carteira:** um investimento com ticker e unidades é avaliado automaticamente ao preço de mercado.
 - As cotações vêm de `GET /api/market/<ticker>` (só para utilizadores autenticados), com cache de 1 hora.
 
+## Plano 50/30/20
+
+- Usa os rendimentos, despesas, prestações e subscrições registados: **50% necessidades, 30% desejos, 20% poupança**.
+  Habitação, alimentação, transportes, saúde, educação, seguros, impostos, telecomunicações e prestações contam como
+  necessidades; lazer e as restantes subscrições como desejos. Cada categoria pode ser reclassificada.
+- **Valor ideal para investir por mês** = 20% do rendimento (ou o que sobrar, se for menos), menos:
+  50% para o fundo de emergência enquanto não tiver o objetivo (3–12 meses de necessidades, 6 por omissão) e
+  30% para amortizar dívidas com TAN ≥ 7%. Mostra também o máximo possível com o orçamento atual.
+- **Estratégia S&P 500:** investimento periódico de valor fixo (DCA) num ETF UCITS de acumulação em euros
+  (ex.: SXR8/VUAA), com números do histórico real do SPY desde 1993 (períodos de 10/20 anos com perda, pior queda)
+  e projeção a 10/20/30 anos do valor mensal recomendado. O plano pode ser registado na carteira com um clique.
+
 ## Estrutura
 
 ```
 src/
   app/              rotas (App Router): /login, (app)/* protegidas; API: /api/auth (Neon Auth), /api/data, /api/market
-  views/            ecrãs: Resumo, Orçamento, Créditos, Subscrições, Cenários, Investimentos, Conta
+  views/            ecrãs: Resumo, Orçamento, Créditos, Subscrições, Plano 50/30/20, Cenários, Investimentos, Conta
   lib/finance/      fórmulas puras (prestação, amortização, juros compostos, estatísticas e simulação de ETFs) + testes
   lib/market/       leitura das respostas do Yahoo Finance e Stooq
   lib/summary.ts    resumo mensal e projeção de cenários por ano
@@ -158,6 +170,7 @@ scripts/migrate.mjs cria a tabela user_data
 - [x] Subscrições: custo mensal/anual, renovações, poupança ao cancelar as pouco usadas
 - [x] Cenários: projeção até 40 anos com inflação, aumentos e presets pessimista/base/otimista
 - [x] Investimentos: carteira com cotações reais, análise e simulação de ETFs, alocação, mais-valias e imposto, independência financeira
+- [x] Plano 50/30/20 com valor ideal a investir, fundo de emergência e estratégia mensal no S&P 500
 - [x] Página de login, perfil do utilizador, dados isolados por conta e sincronizados entre dispositivos, exportação/importação JSON
 
 ## Roadmap sugerido

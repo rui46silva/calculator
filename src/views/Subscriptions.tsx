@@ -1,14 +1,13 @@
 'use client';
 
 import { useStore, newId } from '../data/store';
-import type { Subscription } from '../data/types';
+import { SUBSCRIPTION_CATEGORIES, type Subscription } from '../data/types';
 import { Card, Empty, Field, NumberInput, Select, Stat } from '../components/ui';
 import { EditDialog } from '../components/EditDialog';
 import { useEditor } from '../components/useEditor';
 import { FREQUENCY_LABELS, toAnnual, toMonthly, type Frequency } from '../lib/finance/frequency';
 import { date, money } from '../lib/format';
 
-const CATEGORIES = ['Streaming', 'Música', 'Software', 'Cloud', 'Ginásio', 'Telecomunicações', 'Notícias', 'Jogos', 'Outros'];
 
 export function Subscriptions() {
   const { data } = useStore();
@@ -17,7 +16,7 @@ export function Subscriptions() {
     (): Subscription => ({
       id: newId(),
       name: '',
-      category: CATEGORIES[0],
+      category: SUBSCRIPTION_CATEGORIES[0],
       amount: 0,
       frequency: 'monthly',
       nextRenewal: new Date().toISOString().slice(0, 10),
@@ -81,7 +80,7 @@ export function Subscriptions() {
               <input required value={editor.draft.name} onChange={(e) => editor.set('name', e.target.value)} />
             </Field>
             <Field label="Categoria">
-              <Select value={editor.draft.category} options={CATEGORIES} onChange={(v) => editor.set('category', v)} />
+              <Select value={editor.draft.category} options={SUBSCRIPTION_CATEGORIES} onChange={(v) => editor.set('category', v)} />
             </Field>
             <Field label="Valor (€)">
               <NumberInput value={editor.draft.amount} onChange={(n) => editor.set('amount', n)} min={0} />

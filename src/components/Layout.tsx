@@ -11,7 +11,8 @@ const NAV: { to: string; label: string; short?: string; icon: string }[] = [
   { to: '/orcamento', label: 'Orçamento', short: 'Orçam.', icon: '≡' },
   { to: '/creditos', label: 'Créditos', icon: '⌂' },
   { to: '/subscricoes', label: 'Subscrições', short: 'Subscr.', icon: '↻' },
-  { to: '/cenarios', label: 'Cenários', icon: '↗' },
+  { to: '/plano', label: 'Plano 50/30/20', short: 'Plano', icon: '%' },
+  { to: '/cenarios', label: 'Cenários', short: 'Cenár.', icon: '↗' },
   { to: '/investimentos', label: 'Investimentos', short: 'Investir', icon: '▲' },
   { to: '/conta', label: 'Conta', icon: '●' },
 ];

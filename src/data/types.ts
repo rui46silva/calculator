@@ -41,6 +41,8 @@ export interface Loan {
   startDate: string;
 }
 
+export const SUBSCRIPTION_CATEGORIES = ['Streaming', 'Música', 'Software', 'Cloud', 'Ginásio', 'Telecomunicações', 'Notícias', 'Jogos', 'Outros'] as const;
+
 export interface Subscription {
   id: string;
   name: string;
@@ -77,6 +79,18 @@ export interface MarketAssumptions {
   appliedAt: number;
 }
 
+export type RuleBucket = 'needs' | 'wants';
+
+/** Settings for the 50/30/20 plan. */
+export interface BudgetRuleSettings {
+  /** Cash already set aside for emergencies. */
+  emergencyFund: number;
+  /** Target size of the emergency fund, in months of essential spending. */
+  emergencyMonths: number;
+  /** Per-category overrides of the default needs/wants classification, keyed like `expense:Lazer`. */
+  overrides?: Record<string, RuleBucket>;
+}
+
 export interface AppData {
   version: 1;
   /** Epoch ms of the last local change; used for last-write-wins sync. */
@@ -87,6 +101,7 @@ export interface AppData {
   subscriptions: Subscription[];
   investments: Investment[];
   marketAssumptions?: MarketAssumptions;
+  budgetRule?: BudgetRuleSettings;
 }
 
 export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments';
