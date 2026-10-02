@@ -39,6 +39,13 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: 'IA',
+    items: [
+      { to: '/assistente', label: 'Assistente', icon: '✦' },
+      { to: '/movimentos/importar', label: 'Importar extrato', icon: '⇪' },
+    ],
+  },
+  {
     title: 'Conta',
     items: [{ to: '/conta', label: 'Conta e partilha', icon: '●' }],
   },

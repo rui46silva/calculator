@@ -26,7 +26,7 @@ interface StoreValue {
   syncStatus: SyncStatus;
   upsert<C extends Collection>(collection: C, item: AppData[C][number]): void;
   remove(collection: Collection, id: string): void;
-  update(patch: Partial<Omit<AppData, 'version' | 'updatedAt' | Collection>>): void;
+  update(patch: Partial<Omit<AppData, 'version' | 'updatedAt'>>): void;
   replaceAll(data: AppData): void;
 }
 

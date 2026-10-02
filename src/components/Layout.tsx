@@ -34,7 +34,11 @@ export function Layout({ children }: { children: ReactNode }) {
     }
   };
 
-  const isActive = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
+  // The most specific matching item wins (/movimentos/importar over /movimentos).
+  const activeTo = ALL_ITEMS.map((i) => i.to)
+    .filter((to) => (to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(`${to}/`)))
+    .sort((a, b) => b.length - a.length)[0];
+  const isActive = (to: string) => to === activeTo;
   const primary = MOBILE_PRIMARY.map((to) => ALL_ITEMS.find((i) => i.to === to)!);
   const moreActive = !MOBILE_PRIMARY.some((to) => isActive(to));
 

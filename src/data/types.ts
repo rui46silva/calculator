@@ -158,6 +158,16 @@ export interface Snapshot {
   netWorth: number;
 }
 
+/** A bank statement import, so it can be listed and undone. */
+export interface ImportRecord {
+  id: string;
+  fileName: string;
+  /** ISO date-time of the import. */
+  at: string;
+  count: number;
+  source: 'ai' | 'csv';
+}
+
 export type RuleBucket = 'needs' | 'wants';
 
 /** Settings for the 50/30/20 plan. */
@@ -191,6 +201,7 @@ export interface AppData {
   dismissedRecurring?: string[];
   /** Target share (0–1) of the portfolio per asset class, for rebalancing. */
   targetAllocation?: Record<string, number>;
+  imports?: ImportRecord[];
 }
 
 export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments' | 'transactions' | 'goals' | 'assets';

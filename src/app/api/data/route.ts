@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from '@/lib/server/auth';
 import { pool } from '@/lib/server/db';
+import { dataKeyFor, loadData, sessionUser } from '@/lib/server/userData';
 import type { AppData } from '@/data/types';
 
-const MAX_BYTES = 1_000_000;
+// Below Vercel's 4.5 MB request limit; plenty for years of movements.
+const MAX_BYTES = 4_000_000;
 const NO_STORE = { 'Cache-Control': 'no-store' };
 const COLLECTIONS = ['incomes', 'expenses', 'loans', 'subscriptions', 'investments'] as const;
 
+/** Key of the signed-in user's data document, or null without a session. */
 async function userId(): Promise<string | null> {
-  const auth = getAuth();
-  if (!auth) return null;
-  const { data } = await auth.getSession();
-  return data?.user?.id ?? null;
+  const user = await sessionUser();
+  return user ? dataKeyFor(user.id) : null;
 }
 
 function isAppData(x: unknown): x is AppData {
@@ -24,8 +24,7 @@ function isAppData(x: unknown): x is AppData {
 export async function GET() {
   const id = await userId();
   if (!id) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const { rows } = await pool.query<{ data: AppData }>('select data from user_data where user_id = $1', [id]);
-  return NextResponse.json({ data: rows[0]?.data ?? null }, { headers: NO_STORE });
+  return NextResponse.json({ data: await loadData(id) }, { headers: NO_STORE });
 }
 
 /**
@@ -55,8 +54,7 @@ export async function PUT(req: Request) {
     [id, body, body.updatedAt],
   );
   if (rowCount === 0) {
-    const { rows } = await pool.query<{ data: AppData }>('select data from user_data where user_id = $1', [id]);
-    return NextResponse.json({ data: rows[0]?.data ?? null }, { status: 409, headers: NO_STORE });
+    return NextResponse.json({ data: await loadData(id) }, { status: 409, headers: NO_STORE });
   }
   return NextResponse.json({ ok: true });
 }

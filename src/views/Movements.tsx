@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useStore, newId } from '../data/store';
 import { TRANSACTION_CATEGORIES, type Transaction } from '../data/types';
@@ -177,12 +178,13 @@ export function Movements() {
 
       <Card title="Importar extrato bancário">
         <div className="coming-soon">
-          <span className="tag">Em breve</span>
           <p className="muted">
-            Vais poder carregar o extrato do banco (PDF, CSV ou Excel) e a IA identifica cada movimento, sugere a categoria e põe tudo no
-            sítio certo — despesas pontuais aqui, e despesas fixas ou subscrições recorrentes nas respetivas páginas. Antes de gravar,
-            revês e corriges a lista.
+            Carrega o extrato do banco (PDF, CSV ou Excel) e a IA identifica cada movimento e sugere a categoria. Revês tudo antes de
+            gravar, e podes anular uma importação inteira.
           </p>
+          <Link href="/movimentos/importar" className="button primary">
+            Importar extrato
+          </Link>
         </div>
       </Card>
 
