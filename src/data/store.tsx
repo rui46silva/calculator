@@ -69,6 +69,8 @@ export function StoreProvider({ user, children }: { user: SessionUser; children:
   const [data, setData] = useState<AppData>(emptyData);
   const [ready, setReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
+  /** True once local data has been reconciled with the server copy at least once. */
+  const [reconciled, setReconciled] = useState(false);
   const dirty = useRef(false);
 
   /** Replaces local data with a remote copy if it is newer. */
@@ -106,13 +108,17 @@ export function StoreProvider({ user, children }: { user: SessionUser; children:
           }
           await pushRemote(candidate);
         }
-        if (!cancelled) setSyncStatus('synced');
+        if (!cancelled) {
+          setSyncStatus('synced');
+          setReconciled(true);
+        }
       })
       .catch((err) => {
         if (cancelled) return;
         if (err instanceof ConflictError) {
           adopt(err.server);
           setSyncStatus('synced');
+          setReconciled(true);
         } else setSyncStatus('error');
       });
 
@@ -154,14 +160,16 @@ export function StoreProvider({ user, children }: { user: SessionUser; children:
   }, [data, userId, adopt]);
 
   // Keep this month's snapshot up to date for the net-worth history (past months stay frozen).
+  // Only after the first sync: writing earlier would stamp a stale local copy as newest and
+  // overwrite changes made on another device.
   useEffect(() => {
-    if (!ready || data.updatedAt === 0) return;
+    if (!ready || !reconciled || data.updatedAt === 0) return;
     const snapshots = withCurrentSnapshot(data);
     if (snapshots) {
       dirty.current = true;
       setData((d) => ({ ...d, snapshots, updatedAt: Date.now() }));
     }
-  }, [data, ready]);
+  }, [data, ready, reconciled]);
 
   const mutate = useCallback((fn: (d: AppData) => AppData) => {
     dirty.current = true;
