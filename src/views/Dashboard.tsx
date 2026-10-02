@@ -77,7 +77,7 @@ export function Dashboard() {
         <Stat
           label="Património líquido"
           value={money(s.netWorth)}
-          hint="Investimentos − dívidas (sem imóveis)"
+          hint="Bens + investimentos − dívidas"
           tone={s.netWorth >= 0 ? 'good' : 'bad'}
         />
       </div>

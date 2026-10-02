@@ -1,4 +1,4 @@
-import type { AppData, Loan } from '../data/types';
+import type { AppData, Loan, Snapshot } from '../data/types';
 import { toMonthly } from './finance/frequency';
 import { amortizationSchedule, monthlyPayment } from './finance/loan';
 import { averageMonthly, fixedNames } from './finance/transactions';
@@ -24,7 +24,9 @@ export function loanStatus(loan: Loan, today = new Date()): LoanStatus {
   const { rows } = amortizationSchedule(loan);
   const balance = paid === 0 ? loan.principal : (rows[paid - 1]?.balance ?? 0);
   const remainingMonths = loan.months - paid;
-  return { payment, balance, remainingMonths, active: remainingMonths > 0 && balance > 0.005 };
+  // A loan that only starts in a later month has no instalment yet.
+  const started = loan.startDate.slice(0, 7) <= `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  return { payment, balance, remainingMonths, active: started && remainingMonths > 0 && balance > 0.005 };
 }
 
 export interface MonthlySummary {
@@ -38,6 +40,8 @@ export interface MonthlySummary {
   debtBalance: number;
   invested: number;
   portfolioValue: number;
+  /** House, car, bank accounts… */
+  assets: number;
   netWorth: number;
 }
 
@@ -52,6 +56,7 @@ export function monthlySummary(data: AppData, today = new Date()): MonthlySummar
   const debtBalance = sum(statuses.map((s) => s.balance));
   const invested = sum(data.investments.map((i) => i.invested));
   const portfolioValue = sum(data.investments.map((i) => i.currentValue));
+  const assets = sum((data.assets ?? []).map((a) => a.value));
   return {
     income,
     expenses,
@@ -62,7 +67,8 @@ export function monthlySummary(data: AppData, today = new Date()): MonthlySummar
     debtBalance,
     invested,
     portfolioValue,
-    netWorth: portfolioValue - debtBalance,
+    assets,
+    netWorth: portfolioValue + assets - debtBalance,
   };
 }
 
@@ -137,4 +143,30 @@ export function projectScenario(data: AppData, input: ScenarioInput, today = new
     });
   }
   return years;
+}
+
+/** The current month's snapshot for the history chart. */
+export function currentSnapshot(data: AppData, today = new Date()): Snapshot {
+  const s = monthlySummary(data, today);
+  const r = (n: number) => Math.round(n * 100) / 100;
+  const outgoing = s.expenses + s.subscriptions + s.oneOff + s.debt;
+  return {
+    month: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
+    income: r(s.income),
+    outgoing: r(outgoing),
+    savings: r(s.income - outgoing),
+    investments: r(s.portfolioValue),
+    assets: r(s.assets),
+    debt: r(s.debtBalance),
+    netWorth: r(s.netWorth),
+  };
+}
+
+/** Snapshots with the current month inserted or refreshed; returns null when nothing changed. */
+export function withCurrentSnapshot(data: AppData, today = new Date()): Snapshot[] | null {
+  const snap = currentSnapshot(data, today);
+  const list = data.snapshots ?? [];
+  const existing = list.find((x) => x.month === snap.month);
+  if (existing && JSON.stringify(existing) === JSON.stringify(snap)) return null;
+  return [...list.filter((x) => x.month !== snap.month), snap].sort((a, b) => a.month.localeCompare(b.month));
 }

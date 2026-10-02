@@ -77,8 +77,10 @@ export function TimeChart({ x, series, formatX, formatY, formatTick = formatY, h
     const sx = (v: number) => PAD.left + (x1 === x0 ? innerW / 2 : ((v - x0) / (x1 - x0)) * innerW);
     const sy = (v: number) => PAD.top + innerH - ((v - yMin) / (yMax - yMin || 1)) * innerH;
     const path = (vals: number[]) => vals.map((v, i) => `${i ? 'L' : 'M'}${sx(x[i]).toFixed(1)},${sy(v).toFixed(1)}`).join('');
-    const xTickCount = Math.max(2, Math.min(6, Math.floor(innerW / 90)));
-    const xTicks = Array.from({ length: xTickCount }, (_, i) => Math.round((i * (x.length - 1)) / (xTickCount - 1)));
+    // Never more labels than points, and no repeated positions when there are only a few points.
+    const xTickCount = Math.min(x.length, Math.max(2, Math.min(6, Math.floor(innerW / 90))));
+    const xTicks =
+      xTickCount <= 1 ? [0] : [...new Set(Array.from({ length: xTickCount }, (_, i) => Math.round((i * (x.length - 1)) / (xTickCount - 1))))];
     return { ticks, sx, sy, path, xTicks, innerH };
   }, [x, series, width, height]);
 

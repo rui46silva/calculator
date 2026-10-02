@@ -477,3 +477,19 @@ button.link:disabled { color: var(--muted); text-decoration: none; }
 .alerts { margin: 0 0 16px; }
 .alerts li > span:first-child { color: #fff; }
 @media (prefers-color-scheme: dark) { .advice-warn > span:first-child { color: #1f1300; } }
+
+/* Goals */
+.goals { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.goal { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); }
+.goal header { display: flex; gap: 10px; align-items: center; }
+.goal header > div { flex: 1; min-width: 0; }
+.goal-icon { font-size: 1.6rem; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: var(--surface); }
+.goal-amounts strong { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.goal-bar { height: 10px; background: var(--surface); }
+.goal-done .bar-fill { background: var(--good); }
+.goal-overdue .bar-fill { background: var(--bad); }
+.goal-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.goal-add { align-self: flex-start; padding: 4px 10px; font-size: 0.85rem; }
+.icon-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.icon-picker button { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 1.2rem; padding: 4px 8px; }
+.icon-picker button.on { border-color: var(--accent); background: var(--accent-soft); }

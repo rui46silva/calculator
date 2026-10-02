@@ -112,6 +112,39 @@ export interface Transaction {
   importId?: string;
 }
 
+export interface Goal {
+  id: string;
+  name: string;
+  icon: string;
+  target: number;
+  saved: number;
+  /** YYYY-MM-DD */
+  targetDate: string;
+}
+
+export const ASSET_TYPES = ['Imóvel', 'Automóvel', 'Conta bancária', 'Depósito a prazo', 'Certificados de aforro', 'Outro'] as const;
+
+/** Things owned outside the investment portfolio (house, car, bank accounts). */
+export interface Asset {
+  id: string;
+  name: string;
+  type: string;
+  value: number;
+}
+
+/** End-of-month picture of the finances, recorded automatically for the history chart. */
+export interface Snapshot {
+  /** YYYY-MM */
+  month: string;
+  income: number;
+  outgoing: number;
+  savings: number;
+  investments: number;
+  assets: number;
+  debt: number;
+  netWorth: number;
+}
+
 export type RuleBucket = 'needs' | 'wants';
 
 /** Settings for the 50/30/20 plan. */
@@ -134,6 +167,9 @@ export interface AppData {
   subscriptions: Subscription[];
   investments: Investment[];
   transactions: Transaction[];
+  goals: Goal[];
+  assets: Asset[];
+  snapshots?: Snapshot[];
   marketAssumptions?: MarketAssumptions;
   budgetRule?: BudgetRuleSettings;
   /** Monthly spending limit per one-off category. */
@@ -142,8 +178,8 @@ export interface AppData {
   dismissedRecurring?: string[];
 }
 
-export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments' | 'transactions';
+export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments' | 'transactions' | 'goals' | 'assets';
 
 export function emptyData(): AppData {
-  return { version: 1, updatedAt: 0, incomes: [], expenses: [], loans: [], subscriptions: [], investments: [], transactions: [] };
+  return { version: 1, updatedAt: 0, incomes: [], expenses: [], loans: [], subscriptions: [], investments: [], transactions: [], goals: [], assets: [] };
 }

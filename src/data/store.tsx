@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ConflictError, fetchRemote, pushRemote } from './sync';
 import { emptyData, type AppData, type Collection } from './types';
+import { withCurrentSnapshot } from '../lib/summary';
 
 /** Data saved before accounts existed; handed over once to the first user who signs in on this device. */
 const LEGACY_KEY = 'financas:data';
@@ -151,6 +152,16 @@ export function StoreProvider({ user, children }: { user: SessionUser; children:
     }, PUSH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [data, userId, adopt]);
+
+  // Keep this month's snapshot up to date for the net-worth history (past months stay frozen).
+  useEffect(() => {
+    if (!ready || data.updatedAt === 0) return;
+    const snapshots = withCurrentSnapshot(data);
+    if (snapshots) {
+      dirty.current = true;
+      setData((d) => ({ ...d, snapshots, updatedAt: Date.now() }));
+    }
+  }, [data, ready]);
 
   const mutate = useCallback((fn: (d: AppData) => AppData) => {
     dirty.current = true;

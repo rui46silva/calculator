@@ -32,6 +32,8 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Futuro',
     items: [
+      { to: '/metas', label: 'Metas', icon: '◆' },
+      { to: '/patrimonio', label: 'Património', icon: '◧' },
       { to: '/investimentos', label: 'Investimentos', short: 'Investir', icon: '▲' },
       { to: '/cenarios', label: 'Cenários', icon: '↗' },
     ],
