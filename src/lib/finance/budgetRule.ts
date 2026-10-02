@@ -1,7 +1,7 @@
 import type { AppData, RuleBucket } from '../../data/types';
 import { toMonthly } from './frequency';
 import { loanStatus } from '../summary';
-import { averageMonthlyByCategory } from './transactions';
+import { averageMonthlyByCategory, fixedNames } from './transactions';
 
 export const RULE = { needs: 0.5, wants: 0.3, savings: 0.2 } as const;
 
@@ -69,7 +69,7 @@ export function rulePlan(data: AppData, today = new Date()): RulePlan {
   };
   for (const e of data.expenses) add(`expense:${e.category}`, e.category, toMonthly(e.amount, e.frequency));
   for (const s of data.subscriptions) add(`subscription:${s.category}`, SUB_LABEL + s.category, toMonthly(s.amount, s.frequency));
-  for (const [category, monthly] of averageMonthlyByCategory(data.transactions ?? [], today)) {
+  for (const [category, monthly] of averageMonthlyByCategory(data.transactions ?? [], today, fixedNames(data))) {
     add(`transaction:${category}`, ONE_OFF_LABEL + category, monthly);
   }
   const statuses = data.loans.map((l) => ({ loan: l, status: loanStatus(l, today) }));

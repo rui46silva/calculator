@@ -8,6 +8,8 @@ import { EditDialog } from '../components/EditDialog';
 import { useEditor } from '../components/useEditor';
 import { monthKey, monthTotals, shiftMonth, suggestCategory } from '../lib/finance/transactions';
 import { money, percent } from '../lib/format';
+import { BudgetsCard } from './BudgetsCard';
+import { RecurringCard } from './RecurringCard';
 
 const today = () => {
   const d = new Date();
@@ -99,6 +101,9 @@ export function Movements() {
         <Stat label="Movimentos" value={String(current.count)} hint={current.received ? `Entradas: ${money(current.received)}` : undefined} />
         <Stat label="Maior despesa" value={current.largest ? money(current.largest.amount) : '—'} hint={current.largest?.description} />
       </div>
+
+      <BudgetsCard month={month} isCurrentMonth={isCurrentMonth} />
+      <RecurringCard />
 
       <div className="grid-2 movements-grid">
         <Card title="Por categoria">

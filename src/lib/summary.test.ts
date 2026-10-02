@@ -53,6 +53,17 @@ describe('one-off spending', () => {
   });
 });
 
+describe('fixed items are not counted twice', () => {
+  it('ignores movements already turned into a subscription', () => {
+    const data: AppData = {
+      ...emptyData(),
+      subscriptions: [{ id: 's', name: 'Ginásio Solinca', category: 'Ginásio', amount: 34.99, frequency: 'monthly', nextRenewal: '', rarelyUsed: false }],
+      transactions: [{ id: 't', date: '2026-10-01', description: 'GINASIO SOLINCA', amount: 34.99, type: 'expense', category: 'Lazer', source: 'manual' }],
+    };
+    expect(monthlySummary(data, today).oneOff).toBe(0);
+  });
+});
+
 describe('projectScenario', () => {
   it('accumulates surplus as cash when nothing is invested', () => {
     const data: AppData = {

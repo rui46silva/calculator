@@ -7,9 +7,12 @@ import { effortRate } from '../lib/finance/loan';
 import { money, percent, date } from '../lib/format';
 import { monthlySummary } from '../lib/summary';
 import { monthKey, monthTotals } from '../lib/finance/transactions';
+import { upcomingPayments } from '../lib/finance/calendar';
+import { budgetStatus } from '../lib/finance/budgets';
 
 const EFFORT_LIMIT = 0.35;
-const RENEWAL_WINDOW_DAYS = 30;
+const UPCOMING_DAYS = 14;
+const ALERT_DAYS = 3;
 
 export function Dashboard() {
   const { data } = useStore();
@@ -18,13 +21,10 @@ export function Dashboard() {
   const outgoing = s.expenses + s.subscriptions + s.oneOff + s.debt;
   const thisMonth = monthTotals(data.transactions ?? [], monthKey(new Date()));
 
-  const now = Date.now();
-  const renewals = data.subscriptions
-    .filter((sub) => {
-      const t = new Date(sub.nextRenewal).getTime();
-      return t >= now - 86_400_000 && t <= now + RENEWAL_WINDOW_DAYS * 86_400_000;
-    })
-    .sort((a, b) => a.nextRenewal.localeCompare(b.nextRenewal));
+  const today = new Date();
+  const upcoming = upcomingPayments(data, today, new Date(today.getFullYear(), today.getMonth(), today.getDate() + UPCOMING_DAYS));
+  const soon = upcoming.filter((e) => new Date(`${e.date}T00:00:00`).getTime() - today.getTime() <= ALERT_DAYS * 86_400_000);
+  const budgetAlerts = budgetStatus(data.transactions ?? [], data.categoryBudgets, monthKey(today), today).filter((b) => b.level !== 'ok');
 
   const isEmpty = !data.incomes.length && !data.expenses.length && !data.loans.length && !data.subscriptions.length;
 
@@ -39,6 +39,28 @@ export function Dashboard() {
           </p>
         </Card>
       )}
+      {(budgetAlerts.length > 0 || soon.length > 0) && (
+        <ul className="advice alerts">
+          {budgetAlerts.map((b) => (
+            <li key={b.category} className={b.level === 'over' ? 'advice-bad' : 'advice-warn'}>
+              <span aria-hidden>{b.level === 'over' ? '✕' : '!'}</span>
+              <span>
+                {b.category}: {money(b.spent)} de {money(b.limit)} este mês ({b.level === 'over' ? 'limite ultrapassado' : 'perto do limite'}).{' '}
+                <Link href="/movimentos">Ver movimentos</Link>
+              </span>
+            </li>
+          ))}
+          {soon.map((e, i) => (
+            <li key={`${e.sourceId}-${i}`} className="advice-info">
+              <span aria-hidden>i</span>
+              <span>
+                {e.title}: {money(e.amount)} a {date(e.date)}.
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="stats">
         <Stat label="Rendimento mensal" value={money(s.income)} />
         <Stat label="Saídas mensais" value={money(outgoing)} />
@@ -73,19 +95,19 @@ export function Dashboard() {
             total={Math.max(s.income, outgoing)}
           />
         </Card>
-        <Card title={`Renovações nos próximos ${RENEWAL_WINDOW_DAYS} dias`}>
-          {renewals.length ? (
+        <Card title={`Próximos pagamentos (${UPCOMING_DAYS} dias)`} actions={<Link href="/calendario" className="small">Calendário</Link>}>
+          {upcoming.length ? (
             <ul className="list">
-              {renewals.map((r) => (
-                <li key={r.id}>
-                  <span>{r.name}</span>
-                  <span className="muted">{date(r.nextRenewal)}</span>
-                  <strong>{money(r.amount)}</strong>
+              {upcoming.slice(0, 8).map((e, i) => (
+                <li key={`${e.sourceId}-${e.date}-${i}`}>
+                  <span>{e.title}</span>
+                  <span className="muted">{date(e.date)}</span>
+                  <strong>{money(e.amount)}</strong>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="muted">Nenhuma renovação próxima.</p>
+            <p className="muted">Nenhum pagamento previsto.</p>
           )}
         </Card>
       </div>

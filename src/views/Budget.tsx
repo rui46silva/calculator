@@ -23,7 +23,7 @@ export function Budget() {
 
   return (
     <>
-      <h1>Orçamento</h1>
+      <h1>Despesas fixas</h1>
       <div className="grid-2">
         <Card title="Rendimentos" actions={<button onClick={incomes.add}>+ Adicionar</button>}>
           {data.incomes.length ? (
@@ -118,6 +118,10 @@ export function Budget() {
             <Field label="Frequência">
               <Select value={expenses.draft.frequency} options={FREQUENCY_LABELS} onChange={(v) => expenses.set('frequency', v as Frequency)} />
             </Field>
+            <Field label="Próximo pagamento (opcional)">
+              <input type="date" value={expenses.draft.dueDate ?? ''} onChange={(e) => expenses.set('dueDate', e.target.value || undefined)} />
+            </Field>
+            <p className="muted small full">Com data, a despesa aparece no Calendário e nos lembretes.</p>
           </>
         )}
       </EditDialog>

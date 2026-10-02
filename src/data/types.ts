@@ -25,6 +25,8 @@ export interface Expense {
   category: string;
   amount: number;
   frequency: Frequency;
+  /** Optional next due date (YYYY-MM-DD); with it the expense shows up in the payment calendar. */
+  dueDate?: string;
 }
 
 export const LOAN_TYPES = ['Habitação', 'Pessoal', 'Automóvel', 'Cartão de crédito', 'Outro'] as const;
@@ -134,6 +136,10 @@ export interface AppData {
   transactions: Transaction[];
   marketAssumptions?: MarketAssumptions;
   budgetRule?: BudgetRuleSettings;
+  /** Monthly spending limit per one-off category. */
+  categoryBudgets?: Record<string, number>;
+  /** Recurring-movement suggestions the user chose to ignore (normalised descriptions). */
+  dismissedRecurring?: string[];
 }
 
 export type Collection = 'incomes' | 'expenses' | 'loans' | 'subscriptions' | 'investments' | 'transactions';

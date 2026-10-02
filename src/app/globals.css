@@ -13,6 +13,7 @@
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
+  --warn: #b45309;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 15px;
@@ -33,6 +34,7 @@
     --series-1: #3987e5;
     --series-2: #d95926;
     --series-3: #199e70;
+    --warn: #fbbf24;
   }
 }
 
@@ -330,10 +332,10 @@ button.link:disabled { color: var(--muted); text-decoration: none; }
 .rule-table { margin-top: 4px; }
 .advice { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 8px; }
 .advice li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: var(--bg); font-size: 0.9rem; }
-.advice li > span { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 700; color: #fff; }
-.advice-good > span { background: var(--good); }
-.advice-bad > span { background: var(--bad); }
-.advice-info > span { background: var(--series-1); }
+.advice li > span:first-child { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem; font-weight: 700; color: #fff; }
+.advice-good > span:first-child { background: var(--good); }
+.advice-bad > span:first-child { background: var(--bad); }
+.advice-info > span:first-child { background: var(--series-1); }
 .waterfall { list-style: none; padding: 0; margin: 0 0 12px; }
 .waterfall li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
 .waterfall li.minus strong { color: var(--muted); }
@@ -402,3 +404,76 @@ button.link:disabled { color: var(--muted); text-decoration: none; }
   .mobile-top .sync-error { background: var(--bad); }
   .mobile-top .avatar { text-decoration: none; }
 }
+
+/* Grouped sidebar, bottom bar and "Mais" sheet */
+.nav { overflow-y: auto; }
+.nav-section { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.nav-section-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 8px 12px 4px; }
+.nav-link { padding: 7px 12px; }
+.bottom-nav, .more-sheet { display: none; }
+@media (max-width: 760px) {
+  .nav { display: none; }
+  .bottom-nav {
+    display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; background: var(--surface);
+    border-top: 1px solid var(--border); padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .bottom-nav .nav-link {
+    flex: 1 1 0; min-width: 0; flex-direction: column; gap: 2px; padding: 6px 4px; font-size: 0.7rem; text-align: center;
+    background: none; border: none; color: var(--text); border-radius: 8px;
+  }
+  .bottom-nav .nav-link.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .bottom-nav .nav-short { display: block; }
+  .more-sheet { display: block; position: fixed; inset: 0; z-index: 9; background: rgb(0 0 0 / 0.4); animation: fade-in 0.2s; }
+  .more-panel {
+    position: absolute; left: 0; right: 0; bottom: 0; max-height: 80vh; overflow-y: auto; background: var(--surface);
+    border-radius: 16px 16px 0 0; padding: 12px 16px calc(84px + env(safe-area-inset-bottom)); animation: rise 0.25s;
+  }
+  .more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .more-item {
+    display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 10px; background: var(--bg);
+    color: var(--text); text-decoration: none; font-size: 0.9rem;
+  }
+  .more-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .more-signout { width: 100%; margin-top: 8px; }
+}
+
+/* Budgets, recurring, statuses */
+.status { display: inline-flex; gap: 4px; align-items: center; font-size: 0.78rem; font-weight: 600; }
+.status-ok { color: var(--good); }
+.status-warn { color: var(--warn); }
+.status-over { color: var(--bad); }
+.budgets { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.budget-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.budget-bar { height: 10px; }
+.bar-fill.level-warn { background: var(--warn); }
+.bar-fill.level-over { background: var(--bad); }
+.budget-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 4px; }
+.recurring li { grid-template-columns: 1fr auto; }
+.recurring-actions { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.recurring-actions button { padding: 4px 10px; font-size: 0.8rem; }
+
+/* Calendar */
+.calendar-grid-wrap { grid-template-columns: minmax(320px, 1.4fr) minmax(280px, 1fr); }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-head { font-size: 0.72rem; color: var(--muted); text-align: center; padding: 4px 0; }
+.cal-day {
+  position: relative; min-height: 64px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.8rem;
+}
+.cal-day.has { background: var(--accent-soft); border-color: transparent; }
+.cal-day.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-day.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.cal-num { font-weight: 600; }
+.cal-amount { font-size: 0.72rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.cal-dot { display: none; }
+@media (max-width: 760px) {
+  .calendar-grid-wrap { grid-template-columns: 1fr; }
+  .cal-day { min-height: 44px; align-items: center; padding: 4px 2px; }
+  .cal-amount { display: none; }
+  .cal-dot { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+}
+
+.advice-warn > span:first-child { background: var(--warn); }
+.alerts { margin: 0 0 16px; }
+.alerts li > span:first-child { color: #fff; }
+@media (prefers-color-scheme: dark) { .advice-warn > span:first-child { color: #1f1300; } }

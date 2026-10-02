@@ -1,4 +1,10 @@
-import type { Transaction } from '../../data/types';
+import type { AppData, Transaction } from '../../data/types';
+import { normalizeDescription } from './recurring';
+
+/** Names of fixed expenses and subscriptions, so movements already turned into them aren't counted twice. */
+export function fixedNames(data: Pick<AppData, 'expenses' | 'subscriptions'>): Set<string> {
+  return new Set([...data.expenses.map((e) => e.name), ...data.subscriptions.map((s) => s.name)].map(normalizeDescription));
+}
 
 /** Keyword → category hints for quick entry (and a baseline for the future statement import). */
 const HINTS: [RegExp, string][] = [
@@ -59,13 +65,19 @@ export const AVERAGE_WINDOW_DAYS = 90;
  * Average monthly one-off spending per category over the last 90 days, so a single
  * expensive month doesn't swing the budget. Returns an empty map when there is no history.
  */
-export function averageMonthlyByCategory(transactions: Transaction[], today = new Date()): Map<string, number> {
+export function averageMonthlyByCategory(
+  transactions: Transaction[],
+  today = new Date(),
+  /** Normalised descriptions already covered by a fixed expense or subscription (not one-off). */
+  exclude?: Set<string>,
+): Map<string, number> {
   const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   const start = new Date(end.getTime() - AVERAGE_WINDOW_DAYS * 86_400_000);
   const months = AVERAGE_WINDOW_DAYS / 30;
   const out = new Map<string, number>();
   for (const t of transactions) {
     if (t.type !== 'expense') continue;
+    if (exclude?.has(normalizeDescription(t.description))) continue;
     const d = new Date(`${t.date}T00:00:00`);
     if (d < start || d >= end) continue;
     out.set(t.category, (out.get(t.category) ?? 0) + t.amount / months);
@@ -73,8 +85,8 @@ export function averageMonthlyByCategory(transactions: Transaction[], today = ne
   return out;
 }
 
-export function averageMonthly(transactions: Transaction[], today = new Date()): number {
+export function averageMonthly(transactions: Transaction[], today = new Date(), exclude?: Set<string>): number {
   let total = 0;
-  for (const v of averageMonthlyByCategory(transactions, today).values()) total += v;
+  for (const v of averageMonthlyByCategory(transactions, today, exclude).values()) total += v;
   return total;
 }

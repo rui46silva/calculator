@@ -1,7 +1,7 @@
 import type { AppData, Loan } from '../data/types';
 import { toMonthly } from './finance/frequency';
 import { amortizationSchedule, monthlyPayment } from './finance/loan';
-import { averageMonthly } from './finance/transactions';
+import { averageMonthly, fixedNames } from './finance/transactions';
 
 /** Number of instalments already paid on `today`, counting the start month as the first. */
 export function monthsElapsed(startDate: string, today = new Date()): number {
@@ -46,7 +46,7 @@ export function monthlySummary(data: AppData, today = new Date()): MonthlySummar
   const income = sum(data.incomes.map((i) => toMonthly(i.amount, i.frequency)));
   const expenses = sum(data.expenses.map((e) => toMonthly(e.amount, e.frequency)));
   const subscriptions = sum(data.subscriptions.map((s) => toMonthly(s.amount, s.frequency)));
-  const oneOff = averageMonthly(data.transactions ?? [], today);
+  const oneOff = averageMonthly(data.transactions ?? [], today, fixedNames(data));
   const statuses = data.loans.map((l) => loanStatus(l, today));
   const debt = sum(statuses.filter((s) => s.active).map((s) => s.payment));
   const debtBalance = sum(statuses.map((s) => s.balance));
